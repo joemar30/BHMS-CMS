@@ -15,7 +15,7 @@
     </script>
 
     <script>
-        {#        when delete button in action clicked, get the username of user#}
+        // when delete button in action clicked, get the username of user
         $(document).on('click', '.delete', function () {
             var id = $(this).closest('tr').find('td:nth-child(1)').text();
             $('#delete_id').val(id);
@@ -41,67 +41,63 @@
 
     <section class="content">
         <div class="container-fluid">
-
-
             {% if messages %}
                 {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }}" role="alert">
+                    <div class="alert alert-{{ message.tags }} border-0 shadow-sm" role="alert">
                         {{ message }}
                     </div>
-
                 {% endfor %}
             {% endif %}
 
-
-
-            <div class="card card-info elevation-2">
-                <br>
-                <div class="col-md-12 table-responsive">
-                    <table id="example1" class="table table-bordered table-hover">
-                        <thead class="btn-cancel">
-                        <tr>
-                            <th hidden>ID</th>
-                            <th>Date</th>
-                            <th>Title</th>
-                            <th>Notice</th>
-                            <th>Boardinghouse</th>
-                            <th>Action</th>
-
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {% for notice in notices %}
-
-
-
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="example1" class="table table-hover">
+                            <thead>
                             <tr>
-                                <td hidden>{{ notice.id }}</td>
-                                <td>{{ notice.date }}</td>
-                                <td>{{ notice.title }}</td>
-                                <td>{{ notice.notice }}</td>
-                                <td>{{ notice.boardinghouse }}</td>
-
-                                <td class="text-right">
-                                    <a type="button" class="btn btn-sm btn-primary"
-                                       href="{% url 'notice_detail' notice.id %}"><i class="fa fa-eye"></i></a>
-                                    {% if request.user.is_superuser or request.user.is_staff %}
-                                        <button type="button" class="btn btn-sm btn-danger delete"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#delete"><i
-                                                class="fa fa-trash-alt"></i></button>
-                                    {% endif %}
-                                </td>
+                                <th class="d-none">ID</th>
+                                <th>Date</th>
+                                <th>Title</th>
+                                <th>Notice</th>
+                                <th>Target Boardinghouse</th>
+                                <th class="text-right">Action</th>
                             </tr>
-
-                        {% endfor %}
-
-
-                        </tbody>
-                    </table>
-                    <br>
+                            </thead>
+                            <tbody>
+                            {% for notice in notices %}
+                                <tr>
+                                    <td class="d-none">{{ notice.id }}</td>
+                                    <td><span class="text-muted small">{{ notice.date|date:"M d, Y" }}</span></td>
+                                    <td class="fw-bold">{{ notice.title }}</td>
+                                    <td>
+                                        <div class="text-truncate" style="max-width: 300px;">{{ notice.notice }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-primary"><i class="fas fa-building me-1"></i> {{ notice.boardinghouse }}</span>
+                                    </td>
+                                    <td class="text-right">
+                                        <a class="btn btn-sm btn-outline-primary me-1"
+                                           href="{% url 'notice_detail' notice.id %}">
+                                            <i class="fa fa-eye"></i>
+                                        </a>
+                                        {% if request.user.is_superuser or request.user.is_staff %}
+                                            <button type="button" class="btn btn-sm btn-outline-danger delete"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#delete">
+                                                <i class="fa fa-trash-alt"></i>
+                                            </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                     {% if request.user.is_superuser %}
-                        <div class="text-right pb-3">
-                            <a href="{% url 'notice_archive' %}">View Archived Notices</a>
+                        <div class="mt-4 pt-3 border-top text-right">
+                            <a href="{% url 'notice_archive' %}" class="text-muted small">
+                                <i class="fas fa-archive me-1"></i> View Archived Notices
+                            </a>
                         </div>
                     {% endif %}
                 </div>

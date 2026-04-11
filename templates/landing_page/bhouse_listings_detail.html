@@ -12,37 +12,52 @@
         }
     </script>
     <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const bhouseLat = parseFloat("{{ bhouse.latitude }}") || 7.8258;
+            const bhouseLng = parseFloat("{{ bhouse.longitude }}") || 123.4372;
+            const bhouseLoc = [bhouseLat, bhouseLng];
 
-        let mapOptions = {
-            center: [{{ bhouse.latitude }}, {{ bhouse.longitude }}],
-            zoom: 17
-        }
+            // Initialize Map using Leaflet (Keyless, but high-quality CartoDB tiles)
+            const map = L.map('map').setView(bhouseLoc, 16);
 
-        let map = new L.map('map', mapOptions);
+            // Add CartoDB Voyager tiles (Looks like Google Maps, but reliable and free)
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 20
+            }).addTo(map);
 
-        let layer = new L.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
-        map.addLayer(layer);
+            // Marker for the Boarding House
+            const marker = L.marker(bhouseLoc).addTo(map)
+                .bindPopup('<strong>{{ bhouse.name }}</strong><br>{{ bhouse.address }}')
+                .openPopup();
 
+            // Real-time Geolocation (Specific to User)
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const userLoc = [position.coords.latitude, position.coords.longitude];
 
-        let marker = L.marker([{{ bhouse.latitude }}, {{ bhouse.longitude }}]).addTo(map);
+                        // Add marker for user location
+                        L.circleMarker(userLoc, {
+                            radius: 8,
+                            fillColor: "#007bff",
+                            color: "#fff",
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        }).addTo(map).bindPopup('Your Current Location');
 
-
-
-        map.invalidateSize();
-
-
-    </script>
-    <script>
-        function myFunctionModal() {
-
-            document.getElementById('exampleModal').style.display = 'block';
-
-            setTimeout(function () {
-                map.invalidateSize();
-            }, 10);
-
-        }
-
+                        // Zoom to show both
+                        const bounds = L.latLngBounds([bhouseLoc, userLoc]);
+                        map.fitBounds(bounds, { padding: [50, 50] });
+                    },
+                    (error) => {
+                        console.warn("Geolocation access denied: ", error.message);
+                    }
+                );
+            }
+        });
     </script>
 {% endblock %}
 
@@ -79,13 +94,19 @@
                 <div class="col-lg-7">
                     <div class="img-property-slide-wrap">
                         <div class="img-property-slide">
-                            <img src="{{ bhouse.image.url }}" alt="Image" class="img-fluid" >
+                            {% if bhouse.image %}
+                                <img src="{{ bhouse.image.url }}" alt="Image" class="img-fluid" >
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center" style="height: 400px;">
+                                    <i class="fas fa-image fa-5x text-muted"></i>
+                                </div>
+                            {% endif %}
 
                             {% for bhouse_image in bhouse_images %}
-                                <img src="{{ bhouse_image.image.url }}" alt="Image" class="img-fluid">
+                                {% if bhouse_image.image %}
+                                    <img src="{{ bhouse_image.image.url }}" alt="Image" class="img-fluid">
+                                {% endif %}
                             {% endfor %}
-                            
-
                         </div>
                     </div>
                 </div>

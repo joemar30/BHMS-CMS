@@ -56,7 +56,7 @@
                     <li class="nav-bhouse"><a href="{% url 'bhouse_listings' %}">Boarding Houses</a></li>
 {#                    <li class="nav-rooms"><a href="{% url 'room_listings' %}">Rooms</a></li>#}
                     {% if request.user.is_authenticated %}
-                        <li><a href="{% url 'homepage' %}">Dashboard</a></li>
+                        <li><a href="{% url 'homepage' %}">Login / Dashboard</a></li>
                     {% else %}
                         <li><a href="{% url 'login' %}">Login</a></li>
                     {% endif %}
@@ -84,10 +84,10 @@
             <div class="col-lg-4">
                 <div class="widget">
                     <h3>Contact</h3>
-                    <address>Jaypee G. Dionela</address>
+                    <p class="mb-2 text-black fw-bold">Joemar Flores</p>
                     <ul class="list-unstyled links">
-                        <li><a href="tel://11234567890">090063531669</a></li>
-                        <li><a href="mailto:jaypeedionela55@gmail.com">jaypeedionela55@gmail.com</a></li>
+                        <li><a href="tel://09566313361">09566313361</a></li>
+                        <li><a href="mailto:joemarflores@gmail.com">joemarflores@gmail.com</a></li>
 {#                        <ul class="list-unstyled social">#}
 {#                            <li><a href="#"><span class="icon-instagram"></span></a></li>#}
 {#                            <li><a href="#"><span class="icon-twitter"></span></a></li>#}

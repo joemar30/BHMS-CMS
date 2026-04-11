@@ -15,14 +15,14 @@
     </script>
 
     <script>
-        {#        when delete button in action clicked, get the username of user#}
+        // when delete button in action clicked, get the username of user
         $(document).on('click', '.delete', function () {
             var id = $(this).closest('tr').find('td:nth-child(1)').text();
             $('#delete_id').val(id);
         });
     </script>
     <script>
-        {#        when delete button in action clicked, get the username of user#}
+        // when delete button in action clicked, get the username of user
         $(document).on('click', '.edit', function () {
             var id = $(this).closest('tr').find('td:nth-child(1)').text();
             var first_name = $(this).closest('tr').find('td:nth-child(3)').text();
@@ -75,58 +75,53 @@
 
 
 
-            <div class="card card-info elevation-2">
-                <br>
-                <div class="col-md-12 table-responsive">
-                    <table id="example1" class="table table-bordered table-hover">
-                        <thead class="btn-cancel">
-                        <tr>
-                            <th>ID</th>
-                            <th>Username</th>
-                            <th>First Name</th>
-                            <th>Last Name</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th>Action</th>
-
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {% for user in users %}
-
-
-
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="example1" class="table table-hover">
+                            <thead>
                             <tr>
-                                <td>{{ user.id }}</td>
-                                <td>{{ user.username }}</td>
-                                <td>{{ user.first_name }}</td>
-                                <td>{{ user.last_name }}</td>
-                                <td>{{ user.email }}</td>
-
-                                {% if user.is_superuser %}
-                                    <td>Admin</td>
-                                {% elif user.is_staff %}
-                                    <td>Owner</td>
-                                {% else %}
-                                    <td>Tenant</td>
-                                {% endif %}
-                                <td class="text-right">
-                                    <button type="button" class="btn btn-sm btn-warning edit"
-                                       data-bs-toggle="modal" data-bs-target="#edit"><i class="fa fa-edit"></i></button>
-                                    <button type="button" class="btn btn-sm btn-danger delete" data-bs-toggle="modal"
-                                            data-bs-target="#delete"><i
-                                            class="fa fa-trash-alt"></i></button>
-                                </td>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>First Name</th>
+                                <th>Last Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th class="text-right">Action</th>
                             </tr>
-
-                        {% endfor %}
-
-
-                        </tbody>
-                    </table>
-                <div class="text-right pb-3">
-                            <a href="{% url 'users_archive' %}">View Archived Users</a>
-                        </div>
+                            </thead>
+                            <tbody>
+                            {% for user in users %}
+                                <tr>
+                                    <td class="fw-bold text-primary">{{ user.id }}</td>
+                                    <td>{{ user.username }}</td>
+                                    <td>{{ user.first_name }}</td>
+                                    <td>{{ user.last_name }}</td>
+                                    <td>{{ user.email }}</td>
+                                    <td>
+                                        {% if user.is_superuser %}
+                                            <span class="badge bg-primary">Admin</span>
+                                        {% elif user.is_staff %}
+                                            <span class="badge bg-info text-dark">Owner</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Tenant</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-right">
+                                        <button type="button" class="btn btn-sm btn-outline-warning edit me-1"
+                                           data-bs-toggle="modal" data-bs-target="#edit"><i class="fa fa-edit"></i></button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger delete" data-bs-toggle="modal"
+                                                data-bs-target="#delete"><i
+                                                class="fa fa-trash-alt"></i></button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-right mt-3">
+                        <a href="{% url 'users_archive' %}" class="text-muted small">View Archived Users</a>
+                    </div>
                 </div>
             </div>
         </div>

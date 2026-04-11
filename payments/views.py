@@ -16,10 +16,14 @@ from dateutil.relativedelta import relativedelta
 
 @user_passes_test(lambda u: u.is_staff)
 def utility_bill(request):
-    rooms = Room.objects.filter(owner=request.user)
-    bills = Bills.objects.filter(room__owner=request.user)
-
-    form_room = Room.objects.filter(owner=request.user, is_archive=False)
+    if request.user.is_superuser:
+        rooms = Room.objects.all()
+        bills = Bills.objects.all()
+        form_room = Room.objects.filter(is_archive=False)
+    else:
+        rooms = Room.objects.filter(boardinghouse__owner=request.user)
+        bills = Bills.objects.filter(room__boardinghouse__owner=request.user)
+        form_room = Room.objects.filter(boardinghouse__owner=request.user, is_archive=False)
 
     if request.method == "POST":
         if "button" in request.POST:
@@ -75,14 +79,15 @@ def utility_bill(request):
 @user_passes_test(lambda u: not u.is_superuser)
 def payments(request):
     if request.user.is_superuser or request.user.is_staff:
-        payments = Payments.objects.filter(room__owner=request.user)
+        payments = Payments.objects.filter(room__boardinghouse__owner=request.user)
     else:
         try:
             tenant = Tenant.objects.get(name__id=request.user.id)
             payments = Payments.objects.filter(tenant=tenant)
-        except:
+        except Exception as e:
             tenant = None
             payments = None
+            messages.warning(request, "Please connect your account to a Tenant profile to view payments.")
     form_tenant = Tenant.objects.filter(owner=request.user, is_archive=False)
     form_room = Room.objects.filter(owner=request.user, is_archive=False)
 
@@ -116,6 +121,7 @@ def payments(request):
 
     return render(request, 'payments/payments.html',{
         'payments': payments,
+        'tenant': tenant if not (request.user.is_superuser or request.user.is_staff) else None,
         'form': form,
         'feedback': Feedback.objects.filter(is_viewed=False, feedback_to=request.user).count(),
         'notice': Notice.objects.filter(is_viewed=False).count(),
@@ -169,8 +175,12 @@ def income(request):
     """
     # create a list of dictionaries of names of the months and income
     # get all the months of payments
-    payments = Payments.objects.filter(room__owner=request.user)
-    transient_payments = TransientPayment.objects.filter(room__owner=request.user)
+    if request.user.is_superuser:
+        payments = Payments.objects.all()
+        transient_payments = TransientPayment.objects.all()
+    else:
+        payments = Payments.objects.filter(room__boardinghouse__owner=request.user)
+        transient_payments = TransientPayment.objects.filter(room__boardinghouse__owner=request.user)
     months = []
     for payment in payments:
         total_amount = 0
@@ -243,7 +253,10 @@ def collectibles(request):
 
 
     #########################
-    tenants = Tenant.objects.filter(room__isnull=False, owner=request.user)
+    if request.user.is_superuser:
+        tenants = Tenant.objects.filter(room__isnull=False)
+    else:
+        tenants = Tenant.objects.filter(room__boardinghouse__owner=request.user, room__isnull=False)
 
     collectibles_lists = []
 
@@ -302,7 +315,10 @@ def collectibles(request):
 
 def transient(request):
     if request.user.is_superuser or request.user.is_staff:
-        payments = TransientPayment.objects.filter(room__owner=request.user)
+        if request.user.is_superuser:
+            payments = TransientPayment.objects.all()
+        else:
+            payments = TransientPayment.objects.filter(room__boardinghouse__owner=request.user)
     else:
         try:
             tenant = Tenant.objects.get(name__id=request.user.id)

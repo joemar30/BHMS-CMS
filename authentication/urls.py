@@ -19,7 +19,11 @@ urlpatterns = [
     path('activate/<uidb64>/<token>/', views.activate, name='activate'),
 
     #path to reset password
-    path('password_reset/', auth_views.PasswordResetView.as_view(template_name='authentication/password_reset.html', form_class = UserPasswordResetForm), name='password_reset'),
+    path('password_reset/', auth_views.PasswordResetView.as_view(
+        template_name='authentication/password_reset.html',
+        email_template_name='authentication/password_reset_email.html',
+        form_class=UserPasswordResetForm
+    ), name='password_reset'),
 
     #path to password_reset_done
     path('password_reset_done/', auth_views.PasswordResetDoneView.as_view(template_name='authentication/password_reset_done.html'), name='password_reset_done'),

@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.models import User
 
-from homepage.models import Feedback, Notice
+from homepage.models import Feedback, Notice, Complaint
 
 
 class FeedbackForms(forms.ModelForm):
@@ -10,7 +10,17 @@ class FeedbackForms(forms.ModelForm):
         model = Feedback
         fields = ('feedback',)
         widgets = {
-            'feedback': forms.Textarea(attrs={'class': 'form-control'})
+            'feedback': forms.Textarea(attrs={'class': 'form-control', 'rows': 3})
+        }
+
+
+class ComplaintForm(forms.ModelForm):
+    class Meta:
+        model = Complaint
+        fields = ('issue', 'priority_level')
+        widgets = {
+            'issue': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Describe your issue here...'}),
+            'priority_level': forms.Select(attrs={'class': 'form-select rounded-pill border-0 bg-light shadow-none', 'required': True})
         }
 
 

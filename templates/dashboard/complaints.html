@@ -1,0 +1,343 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block page-title %}
+    Room & Maintenance Complaints
+{% endblock %}
+
+{% block style %}
+<style>
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 15px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+    }
+    .complaint-card {
+        border: none;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        background: #fff;
+    }
+    .complaint-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 4px 12px;
+        border-radius: 10px;
+    }
+    .status-resolved { background: #d4edda; color: #155724; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    
+    .chat-bubble-owner {
+        background: #f1f3f5;
+        border-radius: 15px 15px 15px 0;
+        padding: 12px 18px;
+        border-left: 4px solid #adb5bd;
+    }
+    .chat-bubble-reply {
+        background: #e7f5ff;
+        border-radius: 15px 15px 0 15px;
+        padding: 12px 18px;
+        margin-top: 10px;
+        border-right: 4px solid #228be6;
+        margin-left: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block js %}
+<script>
+    document.getElementById("nav-complaints").className += " active";
+
+    $(document).on('click', '.reply-complaint', function () {
+        var id = $(this).data('id');
+        var issue = $(this).data('issue');
+        $('#reply_complaint_id').val(id);
+        $('#complaint_issue_text').text(issue);
+    });
+
+    $(document).on('click', '.resolve-btn', function () {
+        var id = $(this).data('id');
+        $('#resolve_id').val(id);
+    });
+</script>
+{% endblock %}
+
+{% block modal %}
+<div class="float-right px-4 pt-3">
+    {% if not request.user.is_superuser %}
+    <button type="button" class="btn btn-danger rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#addComplaint">
+        <i class="fa fa-exclamation-triangle me-2"></i> Report Issue
+    </button>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+<section class="content pt-4">
+    <div class="container-fluid">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm border-0 mb-4" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="row">
+            <div class="col-md-8">
+                <!-- Received Complaints (for Admin/Owner) -->
+                {% if received_complaints %}
+                <div class="glass-card p-4 mb-4">
+                    <h5 class="font-weight-bold mb-4 text-danger"><i class="fa fa-tools me-2"></i> Maintenance Requests</h5>
+                    {% for complaint in received_complaints %}
+                    <div class="complaint-card p-3 border mb-3 shadow-none">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light p-2 rounded-circle me-3"><i class="fa fa-user-circle fa-2x text-secondary"></i></div>
+                                <div>
+                                    <h6 class="mb-0 font-weight-bold">{{ complaint.user.get_full_name }}</h6>
+                                    <small class="text-muted">{{ complaint.date|date:"M d, h:i A" }} &bull; Priority: <span class="badge {% if complaint.priority_level == 'High' %}bg-danger{% elif complaint.priority_level == 'Medium' %}bg-warning text-dark{% else %}bg-info{% endif %} rounded-pill">{{ complaint.priority_level }}</span></small>
+                                </div>
+                            </div>
+                            <span class="status-badge status-pending font-weight-bold">PENDING</span>
+                        </div>
+                        <div class="chat-bubble-owner mb-3">
+                            {{ complaint.issue }}
+                        </div>
+
+                        {% if complaint.reply %}
+                        <div class="chat-bubble-reply mb-3 small">
+                            <div class="text-primary font-weight-bold mb-1">Your Response:</div>
+                            {{ complaint.reply }}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <div>
+                                {% if complaint.assigned_staff %}
+                                    <span class="badge bg-secondary rounded-pill px-3 py-2"><i class="fas fa-tools mr-1"></i> Assigned to: <strong>{{ complaint.assigned_staff.get_full_name|default:complaint.assigned_staff.username }}</strong></span>
+                                {% else %}
+                                    <form method="post" class="d-inline-flex align-items-center mb-0">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="button" value="assign_staff">
+                                        <input type="hidden" name="complaint_id" value="{{ complaint.id }}">
+                                        <select name="staff_id" class="form-select form-select-sm rounded-pill shadow-none bg-light border-0 mr-2" required>
+                                            <option value="" disabled selected>Assign Staff...</option>
+                                            {% for staff in staff_members %}
+                                                <option value="{{ staff.id }}">{{ staff.get_full_name|default:staff.username }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <button type="submit" class="btn btn-sm btn-dark rounded-pill fw-bold" style="padding: 0.25rem 0.75rem;">Assign</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-2">
+                                <button class="btn btn-sm btn-outline-success rounded-pill resolve-btn fw-bold" 
+                                        data-bs-toggle="modal" data-bs-target="#resolveModal" data-id="{{ complaint.id }}">
+                                    <i class="fa fa-check"></i> Mark Resolved
+                                </button>
+                                {% if not complaint.reply %}
+                                <button class="btn btn-sm btn-primary rounded-pill reply-complaint fw-bold" 
+                                        data-bs-toggle="modal" data-bs-target="#complaintReplyModal" 
+                                        data-id="{{ complaint.id }}" data-issue="{{ complaint.issue }}">
+                                    <i class="fa fa-reply"></i> Reply
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Assigned Complaints (for Staff processing tasks) -->
+                {% if assigned_complaints %}
+                <div class="glass-card p-4 mb-4">
+                    <h5 class="font-weight-bold mb-4 text-warning"><i class="fa fa-clipboard-check me-2"></i> Tasks Assigned to Me</h5>
+                    {% for complaint in assigned_complaints %}
+                    <div class="complaint-card p-3 border mb-3 shadow-none">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light p-2 rounded-circle me-3"><i class="fa fa-user-circle fa-2x text-secondary"></i></div>
+                                <div>
+                                    <h6 class="mb-0 font-weight-bold">{{ complaint.user.get_full_name }}</h6>
+                                    <small class="text-muted">{{ complaint.date|date:"M d, h:i A" }} &bull; Priority: <span class="badge {% if complaint.priority_level == 'High' %}bg-danger{% elif complaint.priority_level == 'Medium' %}bg-warning text-dark{% else %}bg-info{% endif %} rounded-pill">{{ complaint.priority_level }}</span></small>
+                                </div>
+                            </div>
+                            <span class="status-badge status-pending font-weight-bold"><i class="fas fa-hammer me-1"></i> IN PROGRESS</span>
+                        </div>
+                        <div class="chat-bubble-owner mb-3">
+                            {{ complaint.issue }}
+                        </div>
+
+                        {% if complaint.reply %}
+                        <div class="chat-bubble-reply mb-3 small">
+                            <div class="text-primary font-weight-bold mb-1">Response attached:</div>
+                            {{ complaint.reply }}
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-end gap-2 mt-2">
+                            <button class="btn btn-sm btn-outline-success rounded-pill resolve-btn fw-bold" 
+                                    data-bs-toggle="modal" data-bs-target="#resolveModal" data-id="{{ complaint.id }}">
+                                <i class="fa fa-check"></i> Mark Resolved
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- My Complaints (for Tenants) -->
+                {% if my_complaints %}
+                <div class="glass-card p-4">
+                    <h5 class="font-weight-bold mb-4 text-indigo"><i class="fa fa-clipboard-list me-2"></i> My Reported Issues</h5>
+                    {% for complaint in my_complaints %}
+                    <div class="complaint-card p-3 border mb-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <div class="small text-muted mb-1">{{ complaint.date|date:"F d, Y" }} &bull; Priority: <span class="badge {% if complaint.priority_level == 'High' %}bg-danger{% elif complaint.priority_level == 'Medium' %}bg-warning{% else %}bg-info{% endif %} rounded-pill">{{ complaint.priority_level }}</span></div>
+                                <div class="font-weight-bold mb-2">{{ complaint.issue }}</div>
+                            </div>
+                            <span class="status-badge {% if complaint.is_resolved %}status-resolved{% else %}status-pending{% endif %}">
+                                {% if complaint.is_resolved %}RESOLVED{% else %}PENDING{% endif %}
+                            </span>
+                        </div>
+                        
+                        {% if complaint.reply %}
+                        <div class="mt-3 p-3 bg-light border-start border-primary border-4 rounded-3 small">
+                            <div class="font-weight-bold text-primary mb-1">Response from Management:</div>
+                            {{ complaint.reply }}
+                            <div class="mt-1 text-muted smaller text-right">{{ complaint.reply_date|date:"M d, Y" }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                    {% if not received_complaints %}
+                    <div class="glass-card p-5 text-center">
+                        <i class="fa fa-check-circle fa-4x text-success mb-3 opacity-25"></i>
+                        <h5>No active complaints</h5>
+                        <p class="text-muted small">Everything is running smoothly!</p>
+                    </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            <div class="col-md-4">
+                <div class="glass-card p-4 bg-primary text-white">
+                    <h6 class="font-weight-bold mb-3">Complaints Overview</h6>
+                    <p class="small opacity-75">Submit room issues, maintenance requests, or concerns about your boarding experience. Admin and owners will respond here.</p>
+                    <hr class="bg-white opacity-25">
+                    <div class="d-flex justify-content-between small">
+                        <span>Total Issues:</span>
+                        <span class="font-weight-bold">{{ my_complaints.count|add:received_complaints.count }}</span>
+                    </div>
+                    {% if not request.user.is_superuser %}
+                    <a href="{% url 'complaints_archive' %}" class="btn btn-sm btn-outline-light w-100 mt-4 rounded-pill">View Archive</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Modals -->
+<div class="modal fade" id="addComplaint" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title font-weight-bold">Report Room Issue</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label font-weight-bold small text-muted">SEND TO</label>
+                        <select name="complaint_to" class="form-select rounded-pill border-0 bg-light shadow-none" required>
+                            <option value="admin">System Admin / Management</option>
+                            {% if room %}<option value="owner" selected>Property Owner</option>{% endif %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label font-weight-bold small text-muted">PRIORITY LEVEL</label>
+                        {{ form.priority_level }}
+                    </div>
+                    <div class="mb-0 text-dark">
+                        <label class="form-label font-weight-bold small text-muted">ISSUE DESCRIPTION</label>
+                        {{ form.issue }}
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4" name="button" value="add_complaint">Submit Report</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="complaintReplyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title font-weight-bold">Reply to Complaint</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="replyComplaintForm" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="complaint_id" id="reply_complaint_id">
+                <div class="modal-body p-4 text-dark">
+                    <div class="p-3 bg-light rounded-3 mb-3 small" id="complaint_issue_text"></div>
+                    <div class="mb-0">
+                        <label class="form-label font-weight-bold small text-muted">YOUR RESPONSE</label>
+                        <textarea name="reply" class="form-control rounded-3" rows="4" required placeholder="Describe the solution or action taken..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary rounded-pill px-4" onclick="submitComplaintReply()">Send Response</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="resolveModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow-lg rounded-4 text-center p-3">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="complaint_id" id="resolve_id">
+                <div class="modal-body">
+                    <i class="fa fa-check-circle text-success fa-3x mb-3"></i>
+                    <h5 class="font-weight-bold">Mark as Resolved?</h5>
+                    <p class="text-muted small">This will signify that the issue has been addressed.</p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pt-0">
+                    <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">No</button>
+                    <button type="submit" class="btn btn-success rounded-pill px-4" name="button" value="resolve">Yes, Resolved</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function submitComplaintReply() {
+    const id = $('#reply_complaint_id').val();
+    const form = $('#replyComplaintForm');
+    form.attr('action', '/complaints/' + id + '/');
+    form.submit();
+}
+</script>
+{% endblock %}

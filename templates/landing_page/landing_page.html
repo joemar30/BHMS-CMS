@@ -21,9 +21,12 @@
 
 
         <div class="hero-slide">
-            <div class="img overlay" style="background-image: url('{% static 'landing/images/hero_bg_3.jpg' %}')"></div>
-            <div class="img overlay" style="background-image: url('{% static 'landing/images/hero_bg_2.jpg' %}')"></div>
-            <div class="img overlay" style="background-image: url('{% static 'landing/images/hero_bg_1.jpg' %}')"></div>
+            {% static 'landing/images/hero_bg_3.jpg' as bg_3 %}
+            <div class="img overlay" style="background-image: url('{{ bg_3 }}');"></div>
+            {% static 'landing/images/hero_bg_2.jpg' as bg_2 %}
+            <div class="img overlay" style="background-image: url('{{ bg_2 }}');"></div>
+            {% static 'landing/images/hero_bg_1.jpg' as bg_1 %}
+            <div class="img overlay" style="background-image: url('{{ bg_1 }}');"></div>
         </div>
 
         <div class="container">
@@ -63,8 +66,14 @@
                             {% for boardinghouse in boardinghouses %}
                                 <div class="property-item">
 
-                                    <a href="property-single.html" class="img">
-                                        <img src="{{ boardinghouse.image.url }}" style="pointer-events: none;" alt="Image" class="img-fluid">
+                                    <a href="{% url 'bhouse_detail_detail' boardinghouse.id %}" class="img">
+                                        {% if boardinghouse.image %}
+                                            <img src="{{ boardinghouse.image.url }}" style="pointer-events: none; height: 250px; object-fit: cover;" alt="Image" class="img-fluid w-100">
+                                        {% else %}
+                                            <div class="bg-light d-flex align-items-center justify-content-center" style="height: 250px;">
+                                                <i class="fas fa-image fa-3x text-muted"></i>
+                                            </div>
+                                        {% endif %}
                                     </a>
 
                                     <div class="property-content">
@@ -100,6 +109,59 @@
                     </div>
                 </div>
 
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="container">
+            <div class="row mb-5 align-items-center">
+                <div class="col-lg-6">
+                    <h2 class="font-weight-bold text-primary heading">Available Rooms</h2>
+                </div>
+                <div class="col-lg-6 text-lg-end">
+                    <p><a href="{% url 'room_listings' %}" class="btn btn-primary text-white py-3 px-4">View all rooms</a>
+                    </p>
+                </div>
+            </div>
+            <div class="row">
+                {% for room in rooms %}
+                    <div class="col-xs-12 col-sm-6 col-md-6 col-lg-4">
+                        <div class="property-item mb-30">
+                            <a href="{% url 'room_listings_detail' room.id %}" class="img">
+                                {% if room.image %}
+                                    <img src="{{ room.image.url }}" style="height: 250px; object-fit: cover;" alt="Image" class="img-fluid w-100">
+                                {% else %}
+                                    <div class="bg-light d-flex align-items-center justify-content-center" style="height: 250px;">
+                                        <i class="fas fa-bed fa-3x text-muted"></i>
+                                    </div>
+                                {% endif %}
+                            </a>
+                            <div class="property-content">
+                                <div class="price mb-2"><span>₱{{ room.price }}</span></div>
+                                <div>
+                                    <span class="city d-block mb-3">{{ room.name }}</span>
+                                    <span class="d-block mb-2 text-black-50">{{ room.boardinghouse.name }}</span>
+                                    <div class="specs d-flex mb-4">
+                                        <span class="d-block d-flex align-items-center me-3">
+                                            <span class="icon-bed me-2"></span>
+                                            <span class="caption">{{ room.num_bed }} beds</span>
+                                        </span>
+                                        <span class="d-block d-flex align-items-center">
+                                            <span class="icon-user me-2"></span>
+                                            <span class="caption">{{ room.male_female }}</span>
+                                        </span>
+                                    </div>
+                                    <a href="{% url 'room_listings_detail' room.id %}" class="btn btn-primary py-2 px-3">See details</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="col-12 text-center">
+                        <p class="text-muted">No rooms available at the moment.</p>
+                    </div>
+                {% endfor %}
             </div>
         </div>
     </div>

@@ -14,7 +14,7 @@
         document.getElementById("payments").className += " active";
     </script>
     <script>
-        {#        when delete button in action clicked, get the username of user#}
+        // when delete button in action clicked, get the username of user
         $(document).on('click', '.delete', function () {
             var id = $(this).closest('tr').find('td:nth-child(1)').text();
             $('#id_delete').val(id);
@@ -45,61 +45,90 @@
 
     <section class="content">
         <div class="container-fluid">
-
-
             {% if messages %}
                 {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }}" role="alert">
+                    <div class="alert alert-{{ message.tags }} border-0 shadow-sm" role="alert">
                         {{ message }}
                     </div>
-
                 {% endfor %}
             {% endif %}
 
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body bg-light rounded">
+                    {% if not request.user.is_superuser and not request.user.is_staff and tenant %}
+                    <div class="row text-center text-md-left align-items-center">
+                        <div class="col-md-4 border-right pb-3 pb-md-0">
+                            <h6 class="text-muted text-uppercase fw-bold mb-1">Current Room</h6>
+                            <h4 class="mb-0 text-dark fw-bolder">{% if tenant.room %}{{ tenant.room.name }} <span class="badge bg-info align-middle" style="font-size: 0.5em;">₱{{ tenant.room.price }}/mo</span>{% else %}<span class="text-warning"><i class="fas fa-exclamation-triangle mr-1"></i> Pending Assignment</span>{% endif %}</h4>
+                        </div>
+                        <div class="col-md-4 border-right pb-3 pb-md-0">
+                            <h6 class="text-muted text-uppercase fw-bold mb-1">Pending Balance</h6>
+                            <h4 class="mb-0 text-danger fw-bolder">₱{{ tenant.current_balance|floatformat:2|default:"0.00" }}</h4>
+                        </div>
+                        <div class="col-md-4">
+                            <h6 class="text-muted text-uppercase fw-bold mb-1">Total Paid</h6>
+                            <h4 class="mb-0 text-success fw-bolder">₱{{ tenant.amount_paid|floatformat:2|default:"0.00" }}</h4>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold text-dark"><i class="fas fa-money-check-alt text-primary mr-2"></i> Tenant Payment Logs</h5>
+                        <p class="mb-0 text-muted small">Manage all incoming transactions</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
 
-
-            <div class="card card-info elevation-2">
-                <br>
-                <div class="col-md-12 table-responsive">
-                    <table id="example1" class="table table-bordered table-hover">
-                        <thead class="btn-cancel">
-                        <tr>
-                            <th hidden>ID</th>
-                            <th>Date</th>
-                            <th>Tenant</th>
-                            <th>Room</th>
-                            <th>Amount</th>
-                            <th>Note</th>
-                            <th>Actions</th>
-
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {% for payment in payments %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="example1" class="table table-hover">
+                            <thead>
                             <tr>
-                                <td hidden>{{ payment.id }}</td>
-                                <td>{{ payment.date }}</td>
-                                <td>{{ payment.tenant }}</td>
-                                <td>{{ payment.room }}</td>
-                                <td>{{ payment.amount|floatformat:2 }}</td>
-                                <td>{{ payment.note }}</td>
-
-                                <td class="text-right">
-                                    <a type="button" class="btn btn-sm btn-primary"
-                                       href="{% url 'payments-info' payment.id %}"><i class="fa fa-eye"></i></a>
-                                    {% if request.user.is_superuser or request.user.is_staff %}
-                                    <a class="btn btn-sm btn-danger delete" href="#" data-bs-toggle="modal"
-                                       data-bs-target="#deletePayment"><i
-                                            class="fa fa-trash-alt"></i></a>
-                                    {% endif %}
-                                </td>
+                                <th class="d-none">ID</th>
+                                <th>Date</th>
+                                <th>Tenant</th>
+                                <th>Room</th>
+                                <th>Amount</th>
+                                <th>Note</th>
+                                <th class="text-right">Actions</th>
                             </tr>
-
-                        {% endfor %}
-
-
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                            {% for payment in payments %}
+                                <tr>
+                                    <td class="d-none">{{ payment.id }}</td>
+                                    <td><span class="text-muted small">{{ payment.date|date:"M d, Y" }}</span></td>
+                                    <td class="fw-bold">{{ payment.tenant.name.get_full_name }}</td>
+                                    <td><span class="badge bg-light text-secondary">{{ payment.room }}</span></td>
+                                    <td><span class="text-success fw-bold">₱{{ payment.amount|floatformat:2 }}</span></td>
+                                    <td><span class="text-muted small">{{ payment.note|default:"-" }}</span></td>
+                                    <td class="text-right">
+                                        <a class="btn btn-sm btn-outline-primary me-1"
+                                           href="{% url 'payments-info' payment.id %}">
+                                            <i class="fa fa-eye"></i>
+                                        </a>
+                                        {% if request.user.is_superuser or request.user.is_staff %}
+                                            <button type="button" class="btn btn-sm btn-outline-danger delete"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#deletePayment">
+                                                <i class="fa fa-trash-alt"></i>
+                                            </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-5">
+                                        <i class="fas fa-receipt fa-4x text-light mb-3"></i>
+                                        <h5 class="text-muted fw-bold">No Transaction Records</h5>
+                                        <p class="text-muted small">{% if tenant and not request.user.is_staff %}You do not have any payment history yet. {% if not tenant.room %}Please wait for the owner to assign you a room.{% endif %}{% else %}There are no tenant payments currently logged in the system.{% endif %}</p>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>

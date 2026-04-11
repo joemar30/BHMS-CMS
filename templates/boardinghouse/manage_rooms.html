@@ -10,7 +10,7 @@
         document.getElementById("nav-room-management").className += " active";
     </script>
     <script>
-        {#        when delete button in action clicked, get the username of user#}
+        // when delete button in action clicked, get the username of user
         $(document).on('click', '.edit', function () {
             var name = $(this).closest('tr').find('td:nth-child(2)').text();
             var room = $(this).closest('tr').find('td:nth-child(4)').text();
@@ -18,7 +18,7 @@
             console.log(date);
 
             var newdate = new Date(date);
-            {#format newdate to mm/dd/yyyy#}
+            // format newdate to mm/dd/yyyy
             var formatteddate = newdate.toLocaleDateString('en-GB', {
                 day: 'numeric', month: 'short', year: 'numeric'
             }).replace(/ /g, '-');

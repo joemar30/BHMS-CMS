@@ -1,0 +1,15 @@
+{
+    "python.defaultInterpreterPath": "${workspaceFolder}/boarding-house-management-system/venv/Scripts/python.exe",
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/boarding-house-management-system/homepage",
+        "${workspaceFolder}/boarding-house-management-system/boardinghouse",
+        "${workspaceFolder}/boarding-house-management-system/tenants",
+        "${workspaceFolder}/boarding-house-management-system/payments",
+        "${workspaceFolder}/boarding-house-management-system/venv/Lib/site-packages"
+    ],
+    "python.terminal.activateEnvironment": true,
+    "files.associations": {
+        "**/*.html": "django-html",
+        "**/templates/**/*.html": "django-html"
+    }
+}

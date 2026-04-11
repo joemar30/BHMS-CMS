@@ -31,34 +31,39 @@ def register(request):
             if role == 'Owner':
                 user.is_staff = True
                 user.is_superuser = False
-
-            user.is_active = False
+            
+            user.is_active = True
             user.save()
 
-            # email user with activation link
-            current_site = get_current_site(request)
-            mail_subject = "Activate your account."
+            if role == 'Tenant':
+                from tenants.models import Tenant
+                from boardinghouse.models import Room
+                from datetime import datetime
+                from dateutil.relativedelta import relativedelta
 
-            # the message will render what is written in authentication/email_activation/activate_email_message.html
-            message = render_to_string('authentication/email_activation/activate_email_message.html', {
-                    'user': form.cleaned_data['username'],
-                    'domain': current_site.domain,
-                    'uid': urlsafe_base64_encode(force_bytes(user.pk)),
-                    'token':  default_token_generator.make_token(user),
-                })
-            to_email = form.cleaned_data['email']
-            email = EmailMessage(
-                mail_subject, message, to=[to_email]
-            )
-            email.send()
-            messages.success(request, 'Account created successfully. Please check your email to activate your account.')
+                tenant = Tenant.objects.create(name=user)
+                room_id = request.POST.get('room')
+                if room_id:
+                    selected_room = Room.objects.get(id=room_id)
+                    tenant.room = selected_room
+                    tenant.owner = selected_room.boardinghouse.owner
+                    tenant.date_start = datetime.now().date()
+                    tenant.add_month = datetime.now().date() + relativedelta(months=1)
+                    tenant.save()
+
+
+            messages.success(request, 'Account created successfully! You may now log in.')
             return redirect('login')
         else:
             messages.error(request, 'Account creation failed. Please try again.')
 
 
+    from boardinghouse.models import Room
+    vacant_rooms = Room.objects.filter(vacant=True, is_archive=False)
+
     return render(request, 'authentication/register.html',{
-        'form': form
+        'form': form,
+        'vacant_rooms': vacant_rooms
     })
 
 # to activate user from email

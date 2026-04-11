@@ -15,14 +15,14 @@
     </script>
 
     <script>
-        {#        when delete button in action clicked, get the username of user#}
+        // when delete button in action clicked, get the username of user
         $(document).on('click', '.delete', function () {
             var id = $(this).closest('tr').find('td:nth-child(1)').text();
             $('#delete_id').val(id);
         });
     </script>
     <script>
-        {#        when delete button in action clicked, get the username of user#}
+        // when delete button in action clicked, get the username of user
         $(document).on('click', '.edit', function () {
             var id = $(this).closest('tr').find('td:nth-child(1)').text();
             var first_name = $(this).closest('tr').find('td:nth-child(3)').text();

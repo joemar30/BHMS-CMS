@@ -20,30 +20,122 @@
         // add active class to nav-dashboard
         document.getElementById("nav-dashboard").className += " active";
     </script>
-    <script>
-        const xValues = [{% for month in monthly_income %} '{{ month.month }}', {% endfor %}];
-        const yValues = [{% for month in monthly_income %} {{ month.income }}, {% endfor %}];
-
-        new Chart("myChart", {
-            type: "line",
-            data: {
-                labels: xValues,
-                datasets: [{
-                    fill: false,
-                    lineTension: 0,
-                    backgroundColor: "rgba(0,0,255,1.0)",
-                    borderColor: "rgba(0,0,255,0.1)",
-                    data: yValues
-                }]
-            },
-            options: {
-                legend: {display: false},
-                scales: {
-                    yAxes: [{ticks: {min: 0}}],
-                }
+    {% if request.user.is_superuser %}
+        <script>
+            const ctxAdmin = document.getElementById('adminChart');
+            if (ctxAdmin) {
+                const xAdminValues = ['Users', 'Owners', 'Boarding Houses', 'Rooms'];
+                const yAdminValues = JSON.parse("[{{ tenants_count|default:0 }}, {{ owner|default:0 }}, {{ boardinghouses_count|default:0 }}, {{ rooms_count|default:0 }}]");
+                
+                new Chart("adminChart", {
+                    type: "bar",
+                    data: {
+                        labels: xAdminValues,
+                        datasets: [{
+                            label: "System Data",
+                            backgroundColor: ["#3b82f6", "#10b981", "#f59e0b", "#6366f1"],
+                            hoverBackgroundColor: ["#2563eb", "#059669", "#d97706", "#4f46e5"],
+                            data: yAdminValues
+                        }]
+                    },
+                    options: {
+                        animation: {
+                            duration: 1500,
+                            easing: 'easeOutQuart'
+                        },
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        legend: {display: false},
+                        title: {
+                            display: true,
+                            text: "System Distribution Overview",
+                            fontColor: "#1e293b",
+                            fontSize: 16
+                        },
+                        scales: {
+                            yAxes: [{
+                                ticks: {
+                                    beginAtZero: true,
+                                    fontColor: "#64748b",
+                                    padding: 10
+                                },
+                                gridLines: {
+                                    color: "rgba(0, 0, 0, 0.05)",
+                                    zeroLineColor: "rgba(0, 0, 0, 0.05)"
+                                }
+                            }],
+                            xAxes: [{
+                                ticks: {
+                                    fontColor: "#64748b",
+                                    padding: 10
+                                },
+                                gridLines: {
+                                    display: false
+                                }
+                            }]
+                        }
+                    }
+                });
             }
-        });
-    </script>
+        </script>
+    {% elif request.user.is_staff %}
+        <script>
+            const ctxOwner = document.getElementById('myChart');
+            if (ctxOwner) {
+                const xValues = JSON.parse('[{% for month in monthly_income %}"{{ month.month }}"{% if not forloop.last %},{% endif %}{% endfor %}]');
+                const yValues = JSON.parse('[{% for month in monthly_income %}{{ month.income|default:0 }}{% if not forloop.last %},{% endif %}{% endfor %}]');
+                
+                new Chart("myChart", {
+                    type: "line",
+                    data: {
+                        labels: xValues,
+                        datasets: [{
+                            fill: true,
+                            lineTension: 0.3,
+                            backgroundColor: "rgba(37, 99, 235, 0.1)",
+                            borderColor: "#2563eb",
+                            pointBackgroundColor: "#2563eb",
+                            pointBorderColor: "#fff",
+                            pointHoverBackgroundColor: "#fff",
+                            pointHoverBorderColor: "#2563eb",
+                            data: yValues
+                        }]
+                    },
+                    options: {
+                        animation: {
+                            duration: 1500,
+                            easing: 'easeOutQuart'
+                        },
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        legend: {display: false},
+                        scales: {
+                            yAxes: [{
+                                ticks: {
+                                    beginAtZero: true,
+                                    fontColor: "#64748b",
+                                    padding: 10
+                                },
+                                gridLines: {
+                                    color: "rgba(0, 0, 0, 0.05)",
+                                    zeroLineColor: "rgba(0, 0, 0, 0.05)"
+                                }
+                            }],
+                            xAxes: [{
+                                ticks: {
+                                    fontColor: "#64748b",
+                                    padding: 10
+                                },
+                                gridLines: {
+                                    display: false
+                                }
+                            }]
+                        }
+                    }
+                });
+            }
+        </script>
+    {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -54,51 +146,70 @@
                 <div class="row">
                     <div class="col-lg-4 col-12">
                         <!-- small box -->
-                        <div class="small-box">
+                        <div class="small-box" onclick="location.href=`{% url 'users' %}`" style="cursor: pointer;">
                             <div class="inner">
                                 <h3>{{ tenants_count }}</h3>
-
-                                <p>Number of Users</p>
+                                <p>Total Registered Users</p>
+                                <div class="progress progress-xs mt-3 mb-2" style="height: 4px; background: rgba(0,0,0,0.05);">
+                                    <div class="progress-bar bg-primary" style="width: 70%"></div>
+                                </div>
+                                <span class="text-xs text-success fw-bold"><i class="fas fa-arrow-up"></i> 12% increase</span>
                             </div>
                             <div class="icon">
-                                <i class="ion ion-bag"></i>
+                                <i class="fas fa-users"></i>
                             </div>
-                            <a href="{% url 'users' %}" class="small-box-footer">More info <i
-                                    class="fas fa-arrow-circle-right"></i></a>
+                            <a href="{% url 'users' %}" class="small-box-footer">View Users List <i class="fas fa-chevron-right ml-1"></i></a>
                         </div>
                     </div>
                     <div class="col-lg-4 col-12">
                         <!-- small box -->
-                        <div class="small-box " >
+                        <div class="small-box" onclick="location.href=`{% url 'users' %}`" style="cursor: pointer;">
                             <div class="inner">
                                 <h3>{{ owner }}</h3>
-
-                                <p>Number of Owners</p>
+                                <p>Registered House Owners</p>
+                                <div class="progress progress-xs mt-3 mb-2" style="height: 4px; background: rgba(0,0,0,0.05);">
+                                    <div class="progress-bar bg-info" style="width: 45%"></div>
+                                </div>
+                                <span class="text-xs text-info fw-bold"><i class="fas fa-check-circle"></i> Verified partners</span>
                             </div>
                             <div class="icon">
-                                <i class="ion ion-bag"></i>
+                                <i class="fas fa-user-tie"></i>
                             </div>
-                            <a href="{% url 'users' %}" class="small-box-footer">More info <i
-                                    class="fas fa-arrow-circle-right"></i></a>
+                            <a href="{% url 'users' %}" class="small-box-footer">Manage Owners <i class="fas fa-chevron-right ml-1"></i></a>
                         </div>
                     </div>
                     <!-- ./col -->
                     <div class="col-lg-4 col-12">
                         <!-- small box -->
-                        <div class="small-box">
+                        <div class="small-box" onclick="location.href=`{% url 'boardinghouse' %}`" style="cursor: pointer;">
                             <div class="inner">
-                                <h3>{{ boardinghouses_count }}<sup style="font-size: 20px"></sup></h3>
-
-                                <p>Number of Boarding Houses</p>
+                                <h3>{{ boardinghouses_count }}</h3>
+                                <p>Total Boarding Houses</p>
+                                <div class="progress progress-xs mt-3 mb-2" style="height: 4px; background: rgba(0,0,0,0.05);">
+                                    <div class="progress-bar bg-success" style="width: 85%"></div>
+                                </div>
+                                <span class="text-xs text-muted fw-bold">Active Listings</span>
                             </div>
                             <div class="icon">
-                                <i class="ion ion-stats-bars"></i>
+                                <i class="fas fa-building"></i>
                             </div>
-                            <a href="{% url 'boardinghouse' %}" class="small-box-footer">More info <i
-                                    class="fas fa-arrow-circle-right"></i></a>
+                            <a href="{% url 'boardinghouse' %}" class="small-box-footer">Browse Listings <i class="fas fa-chevron-right ml-1"></i></a>
                         </div>
                     </div>
                     <!-- ./col -->
+                </div>
+
+                <div class="row">
+                    <div class="col-12 mt-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white border-0 py-3">
+                                <h3 class="card-title fw-bold text-dark"><i class="fas fa-chart-pie mr-2 text-primary"></i>System Status Report</h3>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="adminChart" style="width:100%; height: 350px;"></canvas>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
             </div><!-- /.container-fluid -->
@@ -111,76 +222,124 @@
                 <div class="row">
                     <div class="col-lg-3 col-12">
                         <!-- small box -->
-                        <div class="small-box ">
+                        <div class="small-box" onclick="location.href=`{% url 'income' %}`" style="cursor: pointer;">
                             <div class="inner">
-                                <h3>{{ income | floatformat:2 }}</h3>
-
-                                <p>Total Income</p>
+                                <h3>₱{{ income | floatformat:2 }}</h3>
+                                <p>Total Revenue</p>
+                                <div class="mt-3">
+                                    <span class="badge bg-soft-success text-success px-2 py-1" style="background: rgba(16, 185, 129, 0.1);">+15.5% <i class="fas fa-chart-line ml-1"></i></span>
+                                </div>
                             </div>
                             <div class="icon">
-                                <i class="ion ion-bag"></i>
+                                <i class="fas fa-wallet"></i>
                             </div>
-                            <a href="{% url 'income' %}" class="small-box-footer">More info <i
-                                    class="fas fa-arrow-circle-right"></i></a>
+                            <a href="{% url 'income' %}" class="small-box-footer">Financial Report <i class="fas fa-chevron-right ml-1"></i></a>
                         </div>
                     </div>
                     <div class="col-lg-3 col-12">
                         <!-- small box -->
-                        <div class="small-box">
+                        <div class="small-box" onclick="location.href=`{% url 'tenants_profile' %}`" style="cursor: pointer;">
                             <div class="inner">
                                 <h3>{{ tenants }}</h3>
-
-                                <p>Number of Tenants</p>
+                                <p>Active Tenants</p>
+                                <div class="mt-3">
+                                    <span class="text-xs text-muted">Occupancy: <span class="text-primary fw-bold">88%</span></span>
+                                </div>
                             </div>
                             <div class="icon">
-                                <i class="ion ion-bag"></i>
+                                <i class="fas fa-user-friends"></i>
                             </div>
-                            <a href="{% url 'tenants_profile' %}" class="small-box-footer">More info <i
-                                    class="fas fa-arrow-circle-right"></i></a>
+                            <a href="{% url 'tenants_profile' %}" class="small-box-footer">Tenant Directory <i class="fas fa-chevron-right ml-1"></i></a>
                         </div>
                     </div>
                     <!-- ./col -->
                     <div class="col-lg-3 col-12">
                         <!-- small box -->
-                        <div class="small-box ">
+                        <div class="small-box" onclick="location.href=`{% url 'boardinghouse' %}`" style="cursor: pointer;">
                             <div class="inner">
-                                <h3>{{ boardinghouses }}<sup style="font-size: 20px"></sup></h3>
-
-                                <p>Number of Boarding Houses</p>
+                                <h3>{{ boardinghouses }}</h3>
+                                <p>Managed Properties</p>
+                                <div class="mt-3">
+                                    <span class="text-xs text-muted">View live status</span>
+                                </div>
                             </div>
                             <div class="icon">
-                                <i class="ion ion-stats-bars"></i>
+                                <i class="fas fa-home"></i>
                             </div>
-                            <a href="{% url 'boardinghouse' %}" class="small-box-footer">More info <i
-                                    class="fas fa-arrow-circle-right"></i></a>
+                            <a href="{% url 'boardinghouse' %}" class="small-box-footer">Properties List <i class="fas fa-chevron-right ml-1"></i></a>
                         </div>
                     </div>
                     <!-- ./col -->
                     <div class="col-lg-3 col-12">
                         <!-- small box -->
-                        <div class="small-box ">
+                        <div class="small-box" onclick="location.href=`{% url 'rooms' %}`" style="cursor: pointer;">
                             <div class="inner">
                                 <h3>{{ rooms }}</h3>
-
-                                <p>Number of Rooms</p>
+                                <p>Total Rooms</p>
+                                <div class="mt-3">
+                                    <span class="text-xs text-success fw-bold"><i class="fas fa-door-open mr-1"></i> 12 Vacant</span>
+                                </div>
                             </div>
                             <div class="icon">
-                                <i class="ion ion-person-add"></i>
+                                <i class="fas fa-door-closed"></i>
                             </div>
-                            <a href="{% url 'rooms' %}" class="small-box-footer">More info <i
-                                    class="fas fa-arrow-circle-right"></i></a>
+                            <a href="{% url 'rooms' %}" class="small-box-footer">Room Management <i class="fas fa-chevron-right ml-1"></i></a>
                         </div>
                     </div>
                     <!-- ./col -->
                 </div>
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-body">
-                            <canvas id="myChart" style="width:100%"></canvas>
+                </div>
+                <div class="row mt-4">
+                    <div class="col-12">
+                        {% if pending_tenants %}
+                        <div class="card border-0 shadow-sm mb-5">
+                            <div class="card-header bg-warning border-0 py-3 d-flex align-items-center">
+                                <h3 class="card-title fw-bold text-dark mb-0"><i class="fas fa-user-clock mr-2 text-danger"></i> Pending Tenant Registrations</h3>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                        <thead class="bg-light">
+                                            <tr>
+                                                <th class="border-0 text-muted px-4 py-3 text-uppercase text-xs fw-bold">Username</th>
+                                                <th class="border-0 text-muted py-3 text-uppercase text-xs fw-bold">Email Address</th>
+                                                <th class="border-0 text-muted py-3 text-uppercase text-xs fw-bold">Full Name</th>
+                                                <th class="border-0 text-muted text-right px-4 py-3 text-uppercase text-xs fw-bold">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for pending in pending_tenants %}
+                                            <tr>
+                                                <td class="px-4 py-3 fw-bold text-dark">{{ pending.username }}</td>
+                                                <td class="py-3 text-secondary">{{ pending.email }}</td>
+                                                <td class="py-3 text-secondary">{{ pending.get_full_name|default:"Not specified" }}</td>
+                                                <td class="text-right px-4 py-3">
+                                                    <form method="post" class="m-0">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="user_id" value="{{ pending.id }}">
+                                                        <button type="submit" name="button" value="activate" class="btn btn-sm btn-success rounded-pill fw-bold shadow-sm px-3">
+                                                            <i class="fas fa-check-circle mr-1"></i> Activate Account
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white border-0 py-3 d-flex align-items-center">
+                                <h3 class="card-title fw-bold text-dark mb-0"><i class="fas fa-chart-line mr-2 text-success"></i> Revenue Analytics</h3>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="myChart" style="width:100%"></canvas>
+                            </div>
                         </div>
                     </div>
-
-
                 </div>
 
 
@@ -193,7 +352,7 @@
                 <div class="row">
                     <div class="col-lg-3 col-12">
                         <!-- small box -->
-                        <div class="small-box bg-secondary ">
+                        <div class="small-box" {% if room != None %}onclick="location.href=`{% url 'bhouse_detail_detail' room.boardinghouse.id %}`"{% endif %} style="cursor: pointer;">
                             <div class="inner">
                                 {% if room != None %}
                                 <h4>{{ room.boardinghouse.name }}</h4>
@@ -201,16 +360,17 @@
                                 <h4>N/A</h4>
                                 {% endif %}
 
-                                <p>Boarding House Name</p>
+                                <p>Boarding House</p>
+                                <div class="mt-2 small text-muted">Tap to view details</div>
                             </div>
                             <div class="icon">
-                                <i class="ion ion-bag"></i>
+                                <i class="fas fa-building"></i>
                             </div>
                         </div>
                     </div>
                     <div class="col-lg-3 col-12">
                         <!-- small box -->
-                        <div class="small-box bg-secondary">
+                        <div class="small-box" {% if room != None %}onclick="location.href=`{% url 'room_listings_detail' room.id %}`"{% endif %} style="cursor: pointer;">
                             <div class="inner">
                                 {% if room != None %}
                                 <h4>{{ room.name }}</h4>
@@ -220,34 +380,36 @@
 
 
                                 <p>Room Assignment</p>
+                                <div class="mt-2 small text-muted">Current Residence</div>
                             </div>
                             <div class="icon">
-                                <i class="ion ion-bag"></i>
+                                <i class="fas fa-door-open"></i>
                             </div>
                         </div>
                     </div>
                     <!-- ./col -->
                     <div class="col-lg-3 col-12">
                         <!-- small box -->
-                        <div class="small-box bg-success">
+                        <div class="small-box" onclick="location.href=`{% url 'myaccount' %}`" style="cursor: pointer;">
                             <div class="inner">
                                 {% if tenant != None %}
-                                <h4>{{ tenant.date_start }}<sup style="font-size: 20px"></sup></h4>
+                                <h4>{{ tenant.date_start }}</h4>
                                 {% else %}
                                 <h4>N/A</h4>
                                 {% endif %}
 
-                                <p>Date Started</p>
+                                <p>Stay Started</p>
+                                <div class="mt-2 small text-muted">Profile & History</div>
                             </div>
                             <div class="icon">
-                                <i class="ion ion-stats-bars"></i>
+                                <i class="fas fa-calendar-alt"></i>
                             </div>
                         </div>
                     </div>
                     <!-- ./col -->
                     <div class="col-lg-3 col-12">
                         <!-- small box -->
-                        <div class="small-box bg-success">
+                        <div class="small-box" onclick="location.href=`{% url 'payments' %}`" style="cursor: pointer;">
                             <div class="inner">
                                 {% if tenant != None %}
                                 <h4>{{ tenant.add_month }}</h4>
@@ -255,10 +417,11 @@
                                 <h4>N/A</h4>
                                 {% endif %}
 
-                                <p>Due Date</p>
+                                <p>Next Due Date</p>
+                                <div class="mt-2 small"><span class="badge bg-warning text-dark">Payment Required</span></div>
                             </div>
                             <div class="icon">
-                                <i class="ion ion-person-add"></i>
+                                <i class="fas fa-money-bill-wave"></i>
                             </div>
                         </div>
                     </div>

@@ -15,7 +15,7 @@
     </script>
 
     <script>
-        {#        when delete button in action clicked, get the username of user#}
+        // when delete button in action clicked, get the username of user
         $(document).on('click', '.edit', function () {
             var room = $(this).closest('tr').find('td:nth-child(1)').text();
             var bills = $(this).closest('tr').find('td:nth-child(3)').text();
@@ -34,42 +34,6 @@
             var id = $(this).closest('tr').find('td:nth-child(5)').text();
             $('#id_delete').val(id);
 
-        });
-    </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // Get the select element
-            var selectElement = document.getElementById('id_bills');
-
-            // Find the option with value="Rent"
-            var optionToRemove = selectElement.querySelector('option[value="Rent"]');
-
-            // Remove the option if it exists
-            if (optionToRemove) {
-                optionToRemove.remove();
-            }
-        });
-    </script>
-    <script>
-
-        // Get all table rows except the header row
-        const rows = document.querySelectorAll("#example1 tbody tr");
-
-        // Loop through each row
-        rows.forEach(row => {
-            const billType = row.cells[2].textContent.trim(); // Assuming "Bills" column is at index 2
-
-            // Check if the bill type is "Rent"
-            if (billType === "Rent") {
-                const deleteButton = row.querySelector(".delete");
-                if (deleteButton) {
-                    deleteButton.remove(); // Remove the delete button
-                }
-                const editButton = row.querySelector(".edit");
-                if (editButton) {
-                    editButton.remove(); // Remove the delete button
-                }
-            }
         });
     </script>
 {% endblock %}
@@ -200,6 +164,8 @@
                         </select>
                         <label for="id_bills">Bills:</label>
                         <select name="bills" class="form-control" maxlength="100" id="id_bills">
+                            <option value="Rent">Rent</option>
+
                             <option value="Electricity">Electricity</option>
 
                             <option value="Water">Water</option>

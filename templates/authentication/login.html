@@ -54,8 +54,8 @@
                     <div class="input-group mb-3">
                         {{ form.password }}
                         <div class="input-group-append">
-                            <div class="input-group-text">
-                                <span class="fas fa-lock"></span>
+                            <div class="input-group-text toggle-password" style="cursor: pointer;" title="Toggle Password Visibility">
+                                <span class="fas fa-eye-slash"></span>
                             </div>
                         </div>
                     </div>
@@ -71,6 +71,7 @@
                     </div>
                     <div class="text-center align-center">
                         <p>Not registered yet? <a href="{% url 'register' %}">Create an account</a></p>
+                        <a href="{% url 'landing_page' %}" class="btn btn-sm btn-outline-secondary mt-3 rounded-pill px-3"><i class="fas fa-arrow-left mr-1"></i> Back to Home</a>
                     </div>
                 </form>
             {% endblock %}
@@ -96,5 +97,26 @@
     }
 
 </style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll('.toggle-password').forEach(function(icon) {
+            icon.addEventListener('click', function() {
+                var input = this.closest('.input-group').querySelector('input');
+                var iconSpan = this.querySelector('span');
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    iconSpan.classList.remove('fa-eye-slash');
+                    iconSpan.classList.add('fa-eye');
+                } else {
+                    input.type = 'password';
+                    iconSpan.classList.remove('fa-eye');
+                    iconSpan.classList.add('fa-eye-slash');
+                }
+            });
+        });
+    });
+</script>
+
 </body>
 </html>

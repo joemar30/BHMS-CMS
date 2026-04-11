@@ -26,5 +26,10 @@ urlpatterns = [
     path('notice/<int:id>/', views.notice_detail, name='notice_detail'),
     path('feedbacks/', views.feedbacks, name='feedbacks'),
     path('feedbacks/archive/', views.feedbacks_archive, name='feedbacks_archive'),
+    path('feedbacks/reply/<int:id>/', views.feedback_reply, name='feedback_reply'),
+
+    path('complaints/', views.complaints, name='complaints'),
+    path('complaints/<int:id>/', views.complaint_detail, name='complaint_detail'),
+    path('complaints/archive/', views.complaints_archive, name='complaints_archive'),
 
 ]

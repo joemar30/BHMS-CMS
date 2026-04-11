@@ -175,7 +175,7 @@ def rooms(request):
     if request.user.is_superuser:
         rooms = Room.objects.filter(is_archive=False)
     else:
-        rooms = Room.objects.filter(owner=request.user, is_archive=False)
+        rooms = Room.objects.filter(boardinghouse__owner=request.user, is_archive=False)
     bhouses = BoardingHouse.objects.filter(owner=request.user, is_archive=False)
     if request.method == "POST":
         forms = RoomForm(request.POST, request.FILES)
@@ -301,11 +301,13 @@ def manage_rooms(request):
     if request.user.is_superuser:
         tenants = Tenant.objects.filter(room__isnull=False)
         users = Tenant.objects.filter(room__isnull=True)
-        rooms = Room.objects.filter(boardinghouse__owner=request.user, owner=request.user)
+        rooms = Room.objects.filter()
     else:
-        tenants = Tenant.objects.filter(owner=request.user, room__isnull=False)
-        users = Tenant.objects.filter(owner=request.user, room__isnull=True)
-        rooms = Room.objects.filter(boardinghouse__owner=request.user, owner=request.user)
+        # Show tenants occupying rooms in the owner's boarding houses
+        tenants = Tenant.objects.filter(room__boardinghouse__owner=request.user, room__isnull=False)
+        # Show available users/tenants not yet assigned (or assigned to this owner)
+        users = Tenant.objects.filter(room__isnull=True)
+        rooms = Room.objects.filter(boardinghouse__owner=request.user)
 
     if request.method == "POST":
         if "button" in request.POST:

@@ -15,7 +15,9 @@ def tenants_profile(request):
     if request.user.is_superuser:
         tenants = Tenant.objects.filter(is_archive=False)
     else:
-        tenants = Tenant.objects.filter(owner=request.user, is_archive=False)
+        # Fetch tenants in owner's boarding houses or created by owner directly
+        from django.db.models import Q
+        tenants = Tenant.objects.filter(Q(room__boardinghouse__owner=request.user) | Q(owner=request.user), is_archive=False).distinct()
     if request.method == "POST":
         if request.POST.get("button") == "add":
             try:

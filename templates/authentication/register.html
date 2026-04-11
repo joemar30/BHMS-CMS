@@ -1,44 +1,121 @@
 {% extends 'authentication/login.html' %}
 
-
 {% block form %}
-    <form method="post">
-                    {% csrf_token %}
+    <form method="post" class="mt-2">
+        {% csrf_token %}
+        <h5 class="text-center font-weight-bold mb-4 text-info">Create an Account</h5>
 
-    <div class="input-group mb-3">
-        {{ form.first_name }}
-    </div>
-    <div class="input-group mb-3">
-        {{ form.last_name }}
-    </div>
-    <div class="input-group mb-3">
-        {{ form.username }}
-        {{ form.username.help_text }}
-    </div>
-    <div class="input-group mb-3">
-        {{ form.email }}
-    </div>
-    <div class="input-group mb-3">
-        {{ form.password1 }}
-        {{ form.password1.help_text }}
-    </div>
-    <div class="input-group mb-3">
-        {{ form.password2 }}
-        {{ form.password2.help_text }}
-    </div>
-    <div class="input-group mb-3">
-        <select class="form-control" aria-label="Default select example" name="role" id="role" required>
-            <option value="Tenant">Tenant</option>
-            <option value="Owner">Owner</option>
-        </select>
-    </div>
-    <br>
-    <div class="row">
-        <div class="col-6 offset-3">
-            <button type="submit" class="btn btn-block btn-info">Register</button>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="input-group">
+                    {{ form.first_name }}
+                    <div class="input-group-append">
+                        <div class="input-group-text bg-white opacity-50"><span class="fas fa-user-edit"></span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="input-group">
+                    {{ form.last_name }}
+                    <div class="input-group-append">
+                        <div class="input-group-text bg-white opacity-50"><span class="fas fa-user-edit"></span></div>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
-    <div class="text-center align-center">
-        <p>Already have an account? <a href="{% url 'login' %}">login your account</a></p>
-    </div>
+
+        <div class="input-group mb-3">
+            {{ form.username }}
+            <div class="input-group-append">
+                <div class="input-group-text bg-white opacity-50"><span class="fas fa-user"></span></div>
+            </div>
+        </div>
+        
+        <div class="input-group mb-3">
+            {{ form.email }}
+            <div class="input-group-append">
+                <div class="input-group-text bg-white opacity-50"><span class="fas fa-envelope"></span></div>
+            </div>
+        </div>
+
+        <div class="input-group mb-3">
+            {{ form.password1 }}
+            <div class="input-group-append">
+                <div class="input-group-text bg-white opacity-50 toggle-password" style="cursor: pointer;" title="Toggle Password Visibility">
+                    <span class="fas fa-eye-slash"></span>
+                </div>
+            </div>
+        </div>
+        <div class="input-group mb-3">
+            {{ form.password2 }}
+            <div class="input-group-append">
+                <div class="input-group-text bg-white opacity-50 toggle-password" style="cursor: pointer;" title="Toggle Password Visibility">
+                    <span class="fas fa-eye-slash"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group mb-4">
+            <label class="small text-muted font-weight-bold">Register as:</label>
+            <select class="form-control custom-select bg-light border-0" name="role" id="role" required>
+                <option value="Tenant">Tenant / Resident</option>
+                <option value="Owner">Property Owner</option>
+            </select>
+        </div>
+
+        <div class="form-group mb-4" id="roomSelectionGroup">
+            <label class="small text-muted font-weight-bold">Select Vacant Room (Optional):</label>
+            <select class="form-control custom-select bg-light border-0" name="room" id="room">
+                <option value="">-- Let Owner Decide Later --</option>
+                {% for room in vacant_rooms %}
+                <option value="{{ room.id }}">{{ room.boardinghouse.name }} - {{ room.name }} (₱{{ room.price }}) ({{ room.male_female }})</option>
+                {% endfor %}
+            </select>
+            <small class="text-muted d-block mt-1">Leave as default if you haven't been assigned yet.</small>
+        </div>
+
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                var roleSelect = document.getElementById("role");
+                var roomGroup = document.getElementById("roomSelectionGroup");
+
+                function toggleRoom() {
+                    if (roleSelect.value === "Tenant") {
+                        roomGroup.style.display = "block";
+                    } else {
+                        roomGroup.style.display = "none";
+                        document.getElementById("room").value = "";
+                    }
+                }
+
+                roleSelect.addEventListener("change", toggleRoom);
+                toggleRoom();
+            });
+        </script>
+
+        {% if form.errors %}
+            <div class="alert alert-danger p-2 small border-0 shadow-sm rounded">
+                <ul class="mb-0 pl-3">
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <button type="submit" class="btn btn-info btn-block shadow-sm rounded-pill font-weight-bold py-2">Create Account</button>
+            </div>
+        </div>
+        <div class="text-center mt-3 small opacity-75">
+            <p class="mb-0">Already have an account? <a href="{% url 'login' %}" class="font-weight-bold text-info">Log in here</a></p>
+            <a href="{% url 'landing_page' %}" class="btn btn-sm btn-outline-secondary mt-3 rounded-pill px-3"><i class="fas fa-arrow-left mr-1"></i> Back to Home</a>
+        </div>
+    </form>
 {% endblock %}

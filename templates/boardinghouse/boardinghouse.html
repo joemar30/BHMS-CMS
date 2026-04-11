@@ -61,7 +61,7 @@
 
     </script>
     <script>
-        {#        when delete button in action clicked, get the username of user#}
+        // when delete button in action clicked, get the username of user
         $(document).on('click', '.delete', function () {
             var id = $(this).closest('tr').find('td:nth-child(1)').text();
             $('#delete_id').val(id);
@@ -99,55 +99,60 @@
 
 
 
-            <div class="card card-info elevation-2">
-                <br>
-                <div class="col-md-12 table-responsive">
-                    <table id="example1" class="table table-bordered table-hover">
-                        <thead class="btn-cancel">
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Address</th>
-                            <th>Beds</th>
-                            <th>Baths</th>
-                            <th>Image</th>
-                            {% if request.user.is_superuser %}
-                                <th>Owner</th>
-                            {% endif %}
-                            <th>Action</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {% for boardinghouse in boardinghouses %}
-
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="example1" class="table table-hover">
+                            <thead>
                             <tr>
-                                <td>{{ boardinghouse.id }}</td>
-                                <td>{{ boardinghouse.name }}</td>
-                                <td>{{ boardinghouse.address }}</td>
-                                <td>{{ boardinghouse.num_beds }}</td>
-                                <td>{{ boardinghouse.num_baths }}</td>
-                                <td><img src="{{ boardinghouse.image.url }}" height="60" style="border: 2px solid gray">
-                                </td>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Address</th>
+                                <th>Beds</th>
+                                <th>Baths</th>
+                                <th>Preview</th>
                                 {% if request.user.is_superuser %}
-                                    <td>{{ boardinghouse.owner.get_full_name }}</td>
+                                    <th>Owner</th>
                                 {% endif %}
-                                <td class="text-right">
-                                    <a class="btn btn-sm btn-success"
-                                       href="{% url 'boardinghouse_detail' boardinghouse.id %}"><i
-                                            class="fa fa-eye"></i></a>
-                                    <a class="btn btn-sm btn-danger delete" href="" data-bs-toggle="modal"
-                                       data-bs-target="#delete"><i
-                                            class="fa fa-trash-alt"></i></a>
-                                </td>
+                                <th class="text-right">Action</th>
                             </tr>
-
-                        {% endfor %}
-
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                            {% for boardinghouse in boardinghouses %}
+                                <tr>
+                                    <td class="fw-bold text-primary">{{ boardinghouse.id }}</td>
+                                    <td>{{ boardinghouse.name }}</td>
+                                    <td>{{ boardinghouse.address }}</td>
+                                    <td>
+                                        <span class="badge bg-light text-dark"><i class="fas fa-bed me-1"></i> {{ boardinghouse.num_beds }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark"><i class="fas fa-bath me-1"></i> {{ boardinghouse.num_baths }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="rounded-pill shadow-sm overflow-hidden" style="width: 48px; height: 48px;">
+                                            <img src="{{ boardinghouse.image.url }}" class="w-100 h-100 object-fit-cover">
+                                        </div>
+                                    </td>
+                                    {% if request.user.is_superuser %}
+                                        <td>{{ boardinghouse.owner.get_full_name }}</td>
+                                    {% endif %}
+                                    <td class="text-right">
+                                        <a class="btn btn-sm btn-outline-primary me-1"
+                                           href="{% url 'boardinghouse_detail' boardinghouse.id %}"><i
+                                                class="fa fa-eye"></i></a>
+                                        <a class="btn btn-sm btn-outline-danger delete" href="" data-bs-toggle="modal"
+                                           data-bs-target="#delete"><i
+                                                class="fa fa-trash-alt"></i></a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                     {% if request.user.is_superuser %}
-                    <div class="text-right pb-3">
-                        <a href="{% url 'boardinghouse_archive' %}">View Archived Boarding Houses</a>
+                    <div class="text-right mt-3">
+                        <a href="{% url 'boardinghouse_archive' %}" class="text-muted small">View Archived Boarding Houses</a>
                     </div>
                     {% endif %}
                 </div>

@@ -1,5 +1,5 @@
 {% load static %}
-<aside class="main-sidebar sidebar-dark-primary elevation-4">
+<aside class="main-sidebar sidebar-dark-primary border-0">
     <!-- Brand Logo -->
     <div class="text-center">
         <a href="{% url 'homepage' %}" class="brand-link">
@@ -48,11 +48,22 @@
                 {% endif %}
                 <li class="nav-item">
                     <a href="{% url 'feedbacks' %}" class="nav-link" id="nav-feedbacks">
-                        <i class="nav-icon fa fa-file-invoice"></i>
+                        <i class="nav-icon fa fa-comments"></i>
                         <p>
                             Feedbacks
-                            {% if request.user.is_superuser and request.user.is_staff and feedback != 0 %}
-                                <span class="badge badge-danger">{{ feedback }}</span>
+                            {% if request.user.is_authenticated and feedback_notif != 0 %}
+                                <span class="badge badge-danger">{{ feedback_notif }}</span>
+                            {% endif %}
+                        </p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'complaints' %}" class="nav-link" id="nav-complaints">
+                        <i class="nav-icon fa fa-exclamation-circle"></i>
+                        <p>
+                            Complaints
+                            {% if request.user.is_authenticated and complaint_notif != 0 %}
+                                <span class="badge badge-warning text-dark">{{ complaint_notif }}</span>
                             {% endif %}
                         </p>
                     </a>
@@ -69,14 +80,21 @@
                             <i class="nav-icon fa fa-home"></i>
                             <p>
                                 Boarding House
+                                {% if bhouse_count %}
+                                    <span class="badge badge-info right">{{ bhouse_count }}</span>
+                                {% endif %}
                             </p>
                         </a>
+                    </li>
 
                     <li class="nav-item">
                         <a href="{% url 'tenants_profile' %}" class="nav-link" id="nav-tenants">
                             <i class="nav-icon fa fa-user"></i>
                             <p>
                                 Tenants
+                                {% if tenant_count %}
+                                    <span class="badge badge-info right">{{ tenant_count }}</span>
+                                {% endif %}
                             </p>
                         </a>
                     </li>
@@ -88,6 +106,9 @@
                                     <i class="nav-icon fa fa-door-closed"></i>
                                     <p>
                                         Rooms
+                                        {% if room_count %}
+                                            <span class="badge badge-info right">{{ room_count }}</span>
+                                        {% endif %}
                                     </p>
                                 </a>
                             </li>
@@ -99,6 +120,9 @@
                                 <i class="nav-icon fa fa-door-open"></i>
                                 <p>
                                     Room Management
+                                    {% if manage_room_count %}
+                                        <span class="badge badge-warning right">{{ manage_room_count }}</span>
+                                    {% endif %}
                                 </p>
                             </a>
                         </li>
@@ -112,6 +136,9 @@
                                 <i class="nav-icon fa fa-money-bill"></i>
                                 <p>
                                     Utility Bills
+                                    {% if utility_count %}
+                                        <span class="badge badge-info right">{{ utility_count }}</span>
+                                    {% endif %}
                                 </p>
                             </a>
                         </li>
@@ -120,6 +147,9 @@
                                 <i class="nav-icon fa fa-table"></i>
                                 <p>
                                     Collectibles
+                                    {% if collectibles_count %}
+                                        <span class="badge badge-danger right">{{ collectibles_count }}</span>
+                                    {% endif %}
                                 </p>
                             </a>
                         </li>
@@ -133,6 +163,9 @@
                             <i class="nav-icon fa fa-money-bill"></i>
                             <p>
                                 Tenant Payments
+                                {% if payment_count %}
+                                    <span class="badge badge-success right">{{ payment_count }}</span>
+                                {% endif %}
                             </p>
                         </a>
                     </li>
@@ -142,6 +175,9 @@
                                 <i class="nav-icon fa fa-file-invoice"></i>
                                 <p>
                                     Transient Payments
+                                    {% if transient_count %}
+                                        <span class="badge badge-success right">{{ transient_count }}</span>
+                                    {% endif %}
                                 </p>
                             </a>
                         </li>

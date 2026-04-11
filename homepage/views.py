@@ -3,11 +3,12 @@ from datetime import datetime, timedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
+from django.db import models
 from django.shortcuts import render, redirect, get_object_or_404
 
 from boardinghouse.models import BoardingHouse, Room, BoardingHouseImage
-from homepage.forms import FeedbackForms, NoticeForms, UserForm, UserChangePassword
-from homepage.models import Feedback, Notice
+from homepage.forms import FeedbackForms, NoticeForms, UserForm, UserChangePassword, ComplaintForm
+from homepage.models import Feedback, Notice, Complaint
 from payments.models import Payments, TransientPayment
 from tenants.models import Tenant
 
@@ -95,9 +96,9 @@ def dashboard(request):
         'boardinghouses_count': boardinghouses_count,
         'rooms_count': rooms_count,
         'owner': owner,
-        'feedback': Feedback.objects.filter(is_viewed=False, feedback_to=request.user).count(),
+        'feedback_notif': Feedback.objects.filter(is_viewed=False, feedback_to=request.user).count(),
+        'complaint_notif': Complaint.objects.filter(complaint_to=request.user, is_resolved=False).count(),
         'notice': Notice.objects.filter(is_viewed=False).count(),
-
     })
 
 @user_passes_test(lambda u: u.is_authenticated)
@@ -184,12 +185,47 @@ def dashboard_owner(request):
             monthly_income[transient_payment.date.month-1]["income"] += float(transient_payment.amount)
 
 
-        print(monthly_income)
+        payments = Payments.objects.filter(room__boardinghouse__owner=request.user)
+        transient_payments = TransientPayment.objects.filter(room__boardinghouse__owner=request.user)
+        for payment in payments:
+            total_amount = 0
+            tempdict = {}
+            if not any(payment.date.strftime('%B') in d['month'] for d in monthly_income):
 
+                tempdict["month"] = payment.date.strftime('%B')
+                monthly_income.append(tempdict)
+            else:
+                pass
+
+        # get the total amount of payments per month
+        for month in monthly_income:
+            total_amount = 0
+            for payment in payments:
+                if month["month"] == payment.date.strftime('%B'):
+                    total_amount += float(payment.amount)
+            month["income"] = total_amount
+
+        # get the total amount of transient payments per month
+        for month in monthly_income:
+            total_amount = 0
+            for transient_payment in transient_payments:
+                if month["month"] == transient_payment.date.strftime('%B'):
+                    total_amount += float(transient_payment.amount)
+            month["income"] += total_amount
+
+        # get pending tenants where they registered via tenant registration but their is_active=False
+        pending_tenants = User.objects.filter(is_active=False, is_staff=False, is_superuser=False)
 
     else:
         return redirect('homepage')
 
+    if request.method == "POST":
+        if request.POST.get("button") == "activate":
+            user_to_activate = User.objects.get(id=request.POST.get("user_id"))
+            user_to_activate.is_active = True
+            user_to_activate.save()
+            messages.success(request, f'User {user_to_activate.username} activated successfully!')
+            return redirect('dashboard_owner')
 
     return render(request, 'dashboard/dashboard.html',{
         'income': income,
@@ -199,7 +235,7 @@ def dashboard_owner(request):
         'feedback': Feedback.objects.filter(is_viewed=False, feedback_to=request.user).count(),
         'notice': Notice.objects.filter(is_viewed=False).count(),
         'monthly_income': monthly_income,
-
+        'pending_tenants': pending_tenants,
     })
 
 @user_passes_test(lambda u: u.is_authenticated)
@@ -238,7 +274,11 @@ def notice(request):
                 noti.save()
         except Exception as e:
             notices = None
-    bhouses = BoardingHouse.objects.filter(owner=request.user, is_archive=False)
+            messages.warning(request, "Please connect your account to a Tenant profile to view notices.")
+    if request.user.is_superuser:
+        bhouses = BoardingHouse.objects.filter(is_archive=False)
+    else:
+        bhouses = BoardingHouse.objects.filter(owner=request.user, is_archive=False)
 
     if request.method == "POST":
         form = NoticeForms(request.POST)
@@ -412,14 +452,13 @@ def feedbacks(request):
 
 
     return render(request, 'dashboard/feedbacks.html',{
-        'feedback': Feedback.objects.filter(is_viewed=False, feedback_to=request.user).count(),
+        'feedback_notif': Feedback.objects.filter(is_viewed=False, feedback_to=request.user).count(),
+        'complaint_notif': Complaint.objects.filter(complaint_to=request.user, is_resolved=False).count(),
         'notice': Notice.objects.filter(is_viewed=False).count(),
         'my_feedbacks': my_feedbacks,
         'form': form,
         'room': room,
         'received_feedbacks': received_feedbacks,
-
-
     })
 
 @user_passes_test(lambda u: u.is_superuser)
@@ -571,9 +610,11 @@ def users_archive(request):
 
 
 def landing_page(request):
-    boardinghouses = BoardingHouse.objects.all()
+    boardinghouses = BoardingHouse.objects.filter(is_archive=False)
+    rooms = Room.objects.filter(is_archive=False)
     return render(request, 'landing_page/landing_page.html',{
         'boardinghouses': boardinghouses,
+        'rooms': rooms,
     })
 
 
@@ -598,10 +639,108 @@ def bhouse_listings_detail(request, id):
     })
 
 
+def feedback_reply(request, id):
+    feedback = get_object_or_404(Feedback, id=id)
+    if request.method == "POST":
+        feedback.reply = request.POST.get('reply')
+        feedback.reply_date = datetime.now()
+        feedback.save()
+        messages.success(request, 'Reply sent successfully')
+    return redirect('feedbacks')
+
+
+@login_required
+def complaints(request):
+    my_complaints = Complaint.objects.none()
+    received_complaints = Complaint.objects.none()
+
+    if request.user.is_superuser:
+        received_complaints = Complaint.objects.filter(complaint_to__is_superuser=True, is_resolved=False)
+    elif request.user.is_staff:
+        my_complaints = Complaint.objects.filter(user=request.user, is_resolved=False)
+        received_complaints = Complaint.objects.filter(complaint_to=request.user, is_resolved=False)
+    else:
+        my_complaints = Complaint.objects.filter(user=request.user, is_resolved=False)
+
+    assigned_complaints = Complaint.objects.filter(assigned_staff=request.user, is_resolved=False)
+
+    form = ComplaintForm()
+    room = Room.objects.filter(tenant__name_id=request.user.id)
+
+    if request.method == "POST":
+        if request.POST.get("button") == "add_complaint":
+            form = ComplaintForm(request.POST)
+            if form.is_valid():
+                complaint = form.save(commit=False)
+                complaint.user = request.user
+                
+                # Determine recipient
+                recipient = request.POST.get("complaint_to")
+                if recipient == "admin":
+                    complaint.complaint_to = User.objects.filter(is_superuser=True).first()
+                elif recipient == "owner" and room.exists():
+                    complaint.complaint_to = room.first().boardinghouse.owner
+                
+                complaint.save()
+                messages.success(request, 'Complaint Submitted Successfully')
+                return redirect('complaints')
+        
+        elif request.POST.get("button") == "resolve":
+            complaint = get_object_or_404(Complaint, id=request.POST.get("complaint_id"))
+            complaint.is_resolved = True
+            complaint.save()
+            messages.success(request, 'Complaint marked as resolved')
+            return redirect('complaints')
+        
+        elif request.POST.get("button") == "assign_staff":
+            complaint = get_object_or_404(Complaint, id=request.POST.get("complaint_id"))
+            staff_id = request.POST.get("staff_id")
+            if staff_id:
+                complaint.assigned_staff_id = staff_id
+                complaint.save()
+                messages.success(request, 'Staff assigned successfully')
+            return redirect('complaints')
+
+    staff_members = User.objects.filter(is_staff=True)
+
+    context = {
+        'my_complaints': my_complaints,
+        'received_complaints': received_complaints,
+        'assigned_complaints': assigned_complaints,
+        'staff_members': staff_members,
+        'form': form,
+        'room': room,
+        'feedback_notif': Feedback.objects.filter(is_viewed=False, feedback_to=request.user).count(),
+        'complaint_notif': Complaint.objects.filter(complaint_to=request.user, is_resolved=False).count(),
+        'notice': Notice.objects.filter(is_viewed=False).count(),
+    }
+    return render(request, 'dashboard/complaints.html', context)
+
+
+def complaint_detail(request, id):
+    complaint = get_object_or_404(Complaint, id=id)
+    if request.method == "POST":
+        complaint.reply = request.POST.get('reply')
+        complaint.reply_date = datetime.now()
+        complaint.save()
+        messages.success(request, 'Response sent')
+    return redirect('complaints')
+
+
+def complaints_archive(request):
+    complaints = Complaint.objects.filter(is_resolved=True)
+    if not request.user.is_superuser:
+        complaints = complaints.filter(models.Q(user=request.user) | models.Q(complaint_to=request.user))
+    
+    return render(request, 'dashboard/complaints_archive.html', {
+        'complaints': complaints,
+    })
+
+
 def room_listings(request):
     rooms = Room.objects.all()
 
-    return render(request, 'landing_page/room_listings.html',{
+    return render(request, 'landing_page/room_listings.html', {
         'rooms': rooms,
     })
 
@@ -609,7 +748,7 @@ def room_listings(request):
 def room_listings_detail(request, id):
     room = get_object_or_404(Room, id=id)
     bhouse = BoardingHouse.objects.get(id=room.boardinghouse.id)
-    return render(request, 'landing_page/room_listings_detail.html',{
+    return render(request, 'landing_page/room_listings_detail.html', {
         'room': room,
         'bhouse': bhouse,
     })
