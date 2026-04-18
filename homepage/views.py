@@ -878,102 +878,126 @@ def feedback_reply(request, id):
 def complaints(request):
     my_complaints = Complaint.objects.none()
     received_complaints = Complaint.objects.none()
+    staff_members = User.objects.none()
 
-    # Handle Status Filtering from Dashboard
-    status_filter = request.GET.get('status')
-    if status_filter in ['Pending', 'In Progress', 'Resolved', 'Rejected']:
-        if request.user.is_superuser:
-            received_complaints = Complaint.objects.filter(complaint_to__is_superuser=True, status=status_filter)
-        elif request.user.is_staff:
-            if hasattr(request.user, 'staff_profile'):
-                my_complaints = Complaint.objects.filter(user=request.user, status=status_filter).order_by('date')
-                received_complaints = Complaint.objects.filter(complaint_to=request.user, status=status_filter).order_by('date')
-            else:
-                my_complaints = Complaint.objects.filter(user=request.user, status=status_filter).order_by('date')
-                received_complaints = Complaint.objects.filter(complaint_to=request.user, status=status_filter).order_by('date')
-        else:
-            my_complaints = Complaint.objects.filter(user=request.user, status=status_filter).order_by('date')
-        
-        assigned_complaints = Complaint.objects.filter(assigned_staff=request.user, status=status_filter)
-    else:
-        if request.user.is_superuser:
-            received_complaints = Complaint.objects.filter(complaint_to__is_superuser=True, is_resolved=False).order_by('date')
-        elif request.user.is_staff:
-            received_complaints = Complaint.objects.filter(models.Q(complaint_to=request.user) | models.Q(assigned_staff=request.user), is_resolved=False).order_by('date')
-            my_complaints = Complaint.objects.filter(user=request.user).order_by('date')
-        else:
-            my_complaints = Complaint.objects.filter(user=request.user).order_by('date')
-
-    # Clear notifications by marking complaints as viewed
-    received_complaints.filter(is_viewed=False).update(is_viewed=True)
+    # Determine role:
+    # Superuser = admin
+    # is_staff=True AND no staff_profile = Owner
+    # has staff_profile = Staff member
+    # Otherwise = Tenant
+    is_owner = request.user.is_staff and not hasattr(request.user, 'staff_profile')
+    is_staff_member = hasattr(request.user, 'staff_profile')
+    is_superuser = request.user.is_superuser
 
     form = ComplaintForm()
     room = Room.objects.filter(tenant__name_id=request.user.id)
 
     if request.method == "POST":
-        if request.POST.get("button") == "add_complaint":
+        btn = request.POST.get("button")
+
+        if btn == "add_complaint":
             form = ComplaintForm(request.POST)
             if form.is_valid():
                 complaint = form.save(commit=False)
                 complaint.user = request.user
-                
-                # Determine recipient
                 recipient = request.POST.get("complaint_to")
                 if recipient == "admin":
                     complaint.complaint_to = User.objects.filter(is_superuser=True).first()
-                elif (recipient == "owner" or recipient == "staff") and room.exists():
+                elif recipient in ("owner", "staff") and room.exists():
                     owner = room.first().boardinghouse.owner
                     complaint.complaint_to = owner
-                    
                     if recipient == "staff":
-                        # Find a staff member belonging to this owner
-                        staff_member = User.objects.filter(staff_profile__owner=owner, staff_profile__is_verified=True).first()
+                        staff_member = User.objects.filter(
+                            staff_profile__owner=owner,
+                            staff_profile__is_verified=True
+                        ).first()
                         if staff_member:
                             complaint.assigned_staff = staff_member
-                            complaint.status = 'Accepted' # Automatically accepted if sent to staff
-                
+                            complaint.status = 'Accepted'
+                            complaint.is_accepted = True
                 complaint.save()
-                messages.success(request, 'Complaint Submitted Successfully')
+                messages.success(request, 'Complaint submitted successfully.')
                 return redirect('complaints')
-        
-        elif request.POST.get("button") == "update_status":
+
+        elif btn == "accept_complaint":
+            # Owner accepts a complaint — marks it Accepted
             complaint = get_object_or_404(Complaint, id=request.POST.get("complaint_id"))
-            new_status = request.POST.get("new_status")
-            if new_status in ['Pending', 'Accepted', 'Resolved', 'Rejected']:
-                complaint.status = new_status
-                if new_status == 'Resolved':
-                    complaint.is_resolved = True
-                else:
-                    complaint.is_resolved = False
+            if is_owner or is_superuser:
+                complaint.status = 'Accepted'
+                complaint.is_accepted = True
                 complaint.save()
-                messages.success(request, f'Complaint status updated to {new_status}')
-            return redirect('complaints')
-        
-        elif request.POST.get("button") == "resolve":
-            complaint = get_object_or_404(Complaint, id=request.POST.get("complaint_id"))
-            complaint.is_resolved = True
-            complaint.save()
-            messages.success(request, 'Complaint marked as resolved')
-            return redirect('complaints')
-        
-        elif request.POST.get("button") == "assign_staff":
-            complaint = get_object_or_404(Complaint, id=request.POST.get("complaint_id"))
-            staff_id = request.POST.get("staff_id")
-            if staff_id:
-                complaint.assigned_staff_id = staff_id
-                complaint.save()
-                messages.success(request, 'Staff assigned successfully')
+                messages.success(request, 'Complaint accepted.')
             return redirect('complaints')
 
-    if request.user.is_superuser:
-        staff_members = User.objects.filter(is_staff=True)
-    elif request.user.is_staff and not hasattr(request.user, 'staff_profile'):
-        # Owner: see staff they manage, or all verified staff if none assigned yet
-        staff_members = User.objects.filter(staff_profile__owner=request.user, staff_profile__is_verified=True)
-        if not staff_members.exists():
-            staff_members = User.objects.filter(staff_profile__is_verified=True)
+        elif btn == "assign_staff":
+            # Owner assigns staff — complaint auto-accepted and transferred
+            complaint = get_object_or_404(Complaint, id=request.POST.get("complaint_id"))
+            staff_id = request.POST.get("staff_id")
+            if staff_id and (is_owner or is_superuser):
+                complaint.assigned_staff_id = staff_id
+                complaint.status = 'Accepted'
+                complaint.is_accepted = True
+                complaint.save()
+                messages.success(request, 'Staff assigned and complaint accepted.')
+            return redirect('complaints')
+
+        elif btn == "reply_complaint":
+            # Owner/staff replies to a complaint
+            complaint = get_object_or_404(Complaint, id=request.POST.get("complaint_id"))
+            reply_text = request.POST.get("reply")
+            if reply_text:
+                complaint.reply = reply_text
+                complaint.reply_date = datetime.now()
+                complaint.save()
+                messages.success(request, 'Reply sent successfully.')
+            return redirect('complaints')
+
+        elif btn == "update_status":
+            # Staff updates complaint status
+            complaint = get_object_or_404(Complaint, id=request.POST.get("complaint_id"))
+            new_status = request.POST.get("new_status")
+            valid = ['Pending', 'In Progress', 'Resolved', 'Delayed', 'Accepted', 'Rejected']
+            if new_status in valid:
+                complaint.status = new_status
+                complaint.is_resolved = (new_status == 'Resolved')
+                complaint.save()
+                messages.success(request, f'Status updated to {new_status}.')
+            return redirect('complaints')
+
+    # --- Query data per role ---
+    if is_superuser:
+        received_complaints = Complaint.objects.filter(
+            complaint_to__is_superuser=True, is_resolved=False
+        ).order_by('-date')
+        staff_members = User.objects.filter(
+            staff_profile__is_verified=True
+        )
+
+    elif is_owner:
+        # Owner sees all complaints directed to them
+        received_complaints = Complaint.objects.filter(
+            complaint_to=request.user, is_resolved=False
+        ).order_by('-date')
+        # Owner can assign their own verified staff
+        staff_members = User.objects.filter(
+            staff_profile__owner=request.user,
+            staff_profile__is_verified=True
+        )
+
+    elif is_staff_member:
+        # Staff only sees complaints explicitly assigned to them
+        received_complaints = Complaint.objects.filter(
+            assigned_staff=request.user, is_resolved=False
+        ).order_by('-date')
+
     else:
-        staff_members = User.objects.none()
+        # Tenant sees their own complaints
+        my_complaints = Complaint.objects.filter(
+            user=request.user
+        ).order_by('-date')
+
+    # Mark received complaints as viewed
+    received_complaints.filter(is_viewed=False).update(is_viewed=True)
 
     context = {
         'my_complaints': my_complaints,
@@ -981,31 +1005,60 @@ def complaints(request):
         'staff_members': staff_members,
         'form': form,
         'room': room,
+        'is_owner': is_owner,
+        'is_staff_member': is_staff_member,
         'feedback_notif': Feedback.objects.filter(is_viewed=False, feedback_to=request.user).count(),
-        'complaint_notif': Complaint.objects.filter(models.Q(complaint_to=request.user) | models.Q(assigned_staff=request.user), is_resolved=False).count(),
+        'complaint_notif': Complaint.objects.filter(
+            models.Q(complaint_to=request.user) | models.Q(assigned_staff=request.user),
+            is_resolved=False
+        ).count(),
         'notice': Notice.objects.filter(is_viewed=False).count(),
     }
     return render(request, 'dashboard/complaints.html', context)
 
 
+@login_required
 def complaint_detail(request, id):
     complaint = get_object_or_404(Complaint, id=id)
     if request.method == "POST":
-        complaint.reply = request.POST.get('reply')
-        complaint.reply_date = datetime.now()
-        complaint.save()
-        messages.success(request, 'Response sent')
+        reply_text = request.POST.get('reply')
+        if reply_text:
+            complaint.reply = reply_text
+            complaint.reply_date = datetime.now()
+            complaint.save()
+            messages.success(request, 'Response sent successfully.')
     return redirect('complaints')
 
 
+@login_required
+def update_complaint_status(request, complaint_id):
+    """Dedicated endpoint for staff to update complaint status."""
+    if request.method == "POST":
+        complaint = get_object_or_404(Complaint, id=complaint_id)
+        new_status = request.POST.get("new_status")
+        valid = ['Pending', 'In Progress', 'Resolved', 'Delayed']
+        if new_status in valid:
+            complaint.status = new_status
+            complaint.is_resolved = (new_status == 'Resolved')
+            complaint.save()
+            messages.success(request, f'Complaint status updated to {new_status}.')
+        else:
+            messages.error(request, 'Invalid status.')
+    return redirect('complaints')
+
+
+@login_required
 def complaints_archive(request):
     complaints = Complaint.objects.filter(is_resolved=True)
     if not request.user.is_superuser:
-        complaints = complaints.filter(models.Q(user=request.user) | models.Q(complaint_to=request.user))
-    
+        complaints = complaints.filter(
+            models.Q(user=request.user) | models.Q(complaint_to=request.user) | models.Q(assigned_staff=request.user)
+        )
     return render(request, 'dashboard/complaints_archive.html', {
         'complaints': complaints,
     })
+
+
 
 
 def room_listings(request):

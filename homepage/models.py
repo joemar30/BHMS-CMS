@@ -61,11 +61,14 @@ class Complaint(models.Model):
     reply_date = models.DateTimeField(null=True, blank=True)
     STATUS_CHOICES = (
         ('Pending', 'Pending'),
+        ('Accepted', 'Accepted'),
         ('In Progress', 'In Progress'),
+        ('Delayed', 'Delayed'),
         ('Resolved', 'Resolved'),
         ('Rejected', 'Rejected'),
     )
     is_resolved = models.BooleanField(default=False)
+    is_accepted = models.BooleanField(default=False)
     is_viewed = models.BooleanField(default=False)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
     updated_at = models.DateTimeField(auto_now=True)
