@@ -349,7 +349,6 @@
                                             <th>Priority</th>
                                             <th>Date</th>
                                             <th>Status</th>
-                                            <th>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -378,14 +377,7 @@
                                                     {{ c.status }}
                                                 </span>
                                             </td>
-                                            <td>
-                                                <div class="btn-group btn-group-sm">
-                                                    <button onclick="updateAjaxStatus('{{ c.id }}', 'Pending')" class="btn btn-warning" title="Pending"><i class="fas fa-clock"></i></button>
-                                                    <button onclick="updateAjaxStatus('{{ c.id }}', 'In Progress')" class="btn btn-primary" title="In Progress"><i class="fas fa-spinner"></i></button>
-                                                    <button onclick="updateAjaxStatus('{{ c.id }}', 'Resolved')" class="btn btn-success" title="Resolve"><i class="fas fa-check"></i></button>
-                                                    <button onclick="updateAjaxStatus('{{ c.id }}', 'Rejected')" class="btn btn-danger" title="Reject"><i class="fas fa-times"></i></button>
-                                                </div>
-                                            </td>
+
                                         </tr>
                                         {% empty %}
                                         <tr>
