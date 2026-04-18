@@ -14,7 +14,14 @@ def notifications(request):
         # Correctly filter notices for the specific user
         if request.user.is_superuser:
             notice_notif = Notice.objects.filter(is_viewed=False, is_archived=False).count()
+        elif hasattr(request.user, 'staff_profile'):
+            # Staff member — count notices from their employer's boarding houses
+            notice_notif = Notice.objects.filter(
+                boardinghouse__owner=request.user.staff_profile.owner,
+                is_viewed=False, is_archived=False
+            ).count()
         elif request.user.is_staff:
+            # Owner — count their own notices
             notice_notif = Notice.objects.filter(boardinghouse__owner=request.user, is_viewed=False, is_archived=False).count()
         else:
             # For tenants

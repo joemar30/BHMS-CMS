@@ -419,28 +419,35 @@ def dashboard_tenant(request):
 def notice(request):
     if request.user.is_superuser:
         notices = Notice.objects.filter(is_archived=False)
+        bhouses = BoardingHouse.objects.filter(is_archive=False)
+
+    elif hasattr(request.user, 'staff_profile'):
+        # Staff member — show notices from their employer's boarding houses
+        owner = request.user.staff_profile.owner
+        notices = Notice.objects.filter(boardinghouse__owner=owner, is_archived=False).order_by('-date')
+        bhouses = BoardingHouse.objects.filter(owner=owner, is_archive=False)
+
     elif request.user.is_staff:
-        notices = Notice.objects.filter(boardinghouse__owner=request.user, is_archived=False)
+        # Owner — show their own notices
+        notices = Notice.objects.filter(boardinghouse__owner=request.user, is_archived=False).order_by('-date')
+        bhouses = BoardingHouse.objects.filter(owner=request.user, is_archive=False)
 
     else:
-        user = User.objects.get(id=request.user.id)
+        # Tenant
+        bhouses = BoardingHouse.objects.none()
         try:
-            tenant_instance = Tenant.objects.get(name__id=user.id)
+            tenant_instance = Tenant.objects.get(name__id=request.user.id)
             if tenant_instance.room and tenant_instance.room.boardinghouse:
                 owner = tenant_instance.room.boardinghouse.owner
-                # Show all notices from the owner of this boarding house
-                notices = Notice.objects.filter(boardinghouse__owner=owner, is_archived=False)
-                # Removed auto-marking as viewed here so other tenants still see the notification
+                notices = Notice.objects.filter(boardinghouse__owner=owner, is_archived=False).order_by('-date')
+            elif tenant_instance.owner:
+                notices = Notice.objects.filter(boardinghouse__owner=tenant_instance.owner, is_archived=False).order_by('-date')
             else:
                 notices = Notice.objects.none()
                 messages.info(request, "You are not yet assigned to a room. Once assigned, you will see notices from your Boarding House.")
         except Tenant.DoesNotExist:
             notices = Notice.objects.none()
             messages.warning(request, "Please connect your account to a Tenant profile to view notices.")
-    if request.user.is_superuser:
-        bhouses = BoardingHouse.objects.filter(is_archive=False)
-    else:
-        bhouses = BoardingHouse.objects.filter(owner=request.user, is_archive=False)
 
     if request.method == "POST":
         form = NoticeForms(request.POST)
