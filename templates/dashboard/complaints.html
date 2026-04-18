@@ -31,6 +31,8 @@
     }
     .status-resolved { background: #d4edda; color: #155724; }
     .status-pending { background: #fff3cd; color: #856404; }
+    .status-accepted { background: #e7f5ff; color: #1864ab; }
+    .status-rejected { background: #f8d7da; color: #721c24; }
     
     .chat-bubble-owner {
         background: #f1f3f5;
@@ -68,13 +70,13 @@
 {% endblock %}
 
 {% block modal %}
+{% if not request.user.is_superuser and not request.user.staff_profile %}
 <div class="float-right px-4 pt-3">
-    {% if not request.user.is_superuser %}
     <button type="button" class="btn btn-danger rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#addComplaint">
         <i class="fa fa-exclamation-triangle me-2"></i> Report Issue
     </button>
-    {% endif %}
 </div>
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -102,10 +104,10 @@
                                 <div class="bg-light p-2 rounded-circle me-3"><i class="fa fa-user-circle fa-2x text-secondary"></i></div>
                                 <div>
                                     <h6 class="mb-0 font-weight-bold">{{ complaint.user.get_full_name }}</h6>
-                                    <small class="text-muted">{{ complaint.date|date:"M d, h:i A" }} &bull; Priority: <span class="badge {% if complaint.priority_level == 'High' %}bg-danger{% elif complaint.priority_level == 'Medium' %}bg-warning text-dark{% else %}bg-info{% endif %} rounded-pill">{{ complaint.priority_level }}</span></small>
+                                <small class="text-muted">{{ complaint.date|date:"M d, h:i A" }} &bull; Priority: <span class="badge {% if complaint.priority_level == 'Urgent' %}bg-dark border border-danger text-danger{% elif complaint.priority_level == 'High' %}bg-danger{% elif complaint.priority_level == 'Mid' %}bg-warning text-dark{% else %}bg-info{% endif %} rounded-pill">{{ complaint.priority_level }}</span></small>
                                 </div>
                             </div>
-                            <span class="status-badge status-pending font-weight-bold">PENDING</span>
+                            <span class="status-badge status-{{ complaint.status|lower }} font-weight-bold">{{ complaint.status|upper }}</span>
                         </div>
                         <div class="chat-bubble-owner mb-3">
                             {{ complaint.issue }}
@@ -138,18 +140,25 @@
                                 {% endif %}
                             </div>
 
-                            <div class="d-flex justify-content-end gap-2">
-                                <button class="btn btn-sm btn-outline-success rounded-pill resolve-btn fw-bold" 
-                                        data-bs-toggle="modal" data-bs-target="#resolveModal" data-id="{{ complaint.id }}">
-                                    <i class="fa fa-check"></i> Mark Resolved
-                                </button>
-                                {% if not complaint.reply %}
-                                <button class="btn btn-sm btn-primary rounded-pill reply-complaint fw-bold" 
-                                        data-bs-toggle="modal" data-bs-target="#complaintReplyModal" 
-                                        data-id="{{ complaint.id }}" data-issue="{{ complaint.issue }}">
-                                    <i class="fa fa-reply"></i> Reply
-                                </button>
-                                {% endif %}
+                            <div class="d-flex justify-content-end flex-wrap gap-2">
+                                <form method="post" class="m-0 d-flex flex-wrap gap-2">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="complaint_id" value="{{ complaint.id }}">
+                                    <input type="hidden" name="button" value="update_status">
+                                    
+                                    <button type="submit" name="new_status" value="Accepted" class="btn btn-sm {% if complaint.status == 'Accepted' %}btn-primary{% else %}btn-outline-primary{% endif %} rounded-pill fw-bold">
+                                        <i class="fa fa-check"></i> Accept
+                                    </button>
+                                    <button type="submit" name="new_status" value="Resolved" class="btn btn-sm {% if complaint.status == 'Resolved' %}btn-success{% else %}btn-outline-success{% endif %} rounded-pill fw-bold">
+                                        <i class="fa fa-check-double"></i> Resolve
+                                    </button>
+                                    <button type="submit" name="new_status" value="Pending" class="btn btn-sm {% if complaint.status == 'Pending' %}btn-warning{% else %}btn-outline-warning text-dark{% endif %} rounded-pill fw-bold">
+                                        <i class="fa fa-clock"></i> Pending
+                                    </button>
+                                    <button type="submit" name="new_status" value="Rejected" class="btn btn-sm {% if complaint.status == 'Rejected' %}btn-danger{% else %}btn-outline-danger{% endif %} rounded-pill fw-bold">
+                                        <i class="fa fa-times"></i> Reject
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     </div>
@@ -157,43 +166,6 @@
                 </div>
                 {% endif %}
 
-                <!-- Assigned Complaints (for Staff processing tasks) -->
-                {% if assigned_complaints %}
-                <div class="glass-card p-4 mb-4">
-                    <h5 class="font-weight-bold mb-4 text-warning"><i class="fa fa-clipboard-check me-2"></i> Tasks Assigned to Me</h5>
-                    {% for complaint in assigned_complaints %}
-                    <div class="complaint-card p-3 border mb-3 shadow-none">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-light p-2 rounded-circle me-3"><i class="fa fa-user-circle fa-2x text-secondary"></i></div>
-                                <div>
-                                    <h6 class="mb-0 font-weight-bold">{{ complaint.user.get_full_name }}</h6>
-                                    <small class="text-muted">{{ complaint.date|date:"M d, h:i A" }} &bull; Priority: <span class="badge {% if complaint.priority_level == 'High' %}bg-danger{% elif complaint.priority_level == 'Medium' %}bg-warning text-dark{% else %}bg-info{% endif %} rounded-pill">{{ complaint.priority_level }}</span></small>
-                                </div>
-                            </div>
-                            <span class="status-badge status-pending font-weight-bold"><i class="fas fa-hammer me-1"></i> IN PROGRESS</span>
-                        </div>
-                        <div class="chat-bubble-owner mb-3">
-                            {{ complaint.issue }}
-                        </div>
-
-                        {% if complaint.reply %}
-                        <div class="chat-bubble-reply mb-3 small">
-                            <div class="text-primary font-weight-bold mb-1">Response attached:</div>
-                            {{ complaint.reply }}
-                        </div>
-                        {% endif %}
-
-                        <div class="d-flex justify-content-end gap-2 mt-2">
-                            <button class="btn btn-sm btn-outline-success rounded-pill resolve-btn fw-bold" 
-                                    data-bs-toggle="modal" data-bs-target="#resolveModal" data-id="{{ complaint.id }}">
-                                <i class="fa fa-check"></i> Mark Resolved
-                            </button>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
 
                 <!-- My Complaints (for Tenants) -->
                 {% if my_complaints %}
@@ -203,11 +175,11 @@
                     <div class="complaint-card p-3 border mb-3">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div>
-                                <div class="small text-muted mb-1">{{ complaint.date|date:"F d, Y" }} &bull; Priority: <span class="badge {% if complaint.priority_level == 'High' %}bg-danger{% elif complaint.priority_level == 'Medium' %}bg-warning{% else %}bg-info{% endif %} rounded-pill">{{ complaint.priority_level }}</span></div>
+                                <div class="small text-muted mb-1">{{ complaint.date|date:"F d, Y" }} &bull; Priority: <span class="badge {% if complaint.priority_level == 'Urgent' %}bg-dark border border-danger text-danger{% elif complaint.priority_level == 'High' %}bg-danger{% elif complaint.priority_level == 'Mid' %}bg-warning{% else %}bg-info{% endif %} rounded-pill">{{ complaint.priority_level }}</span></div>
                                 <div class="font-weight-bold mb-2">{{ complaint.issue }}</div>
                             </div>
-                            <span class="status-badge {% if complaint.is_resolved %}status-resolved{% else %}status-pending{% endif %}">
-                                {% if complaint.is_resolved %}RESOLVED{% else %}PENDING{% endif %}
+                            <span class="status-badge status-{{ complaint.status|lower }}">
+                                {{ complaint.status|upper }}
                             </span>
                         </div>
                         
@@ -265,7 +237,10 @@
                         <label class="form-label font-weight-bold small text-muted">SEND TO</label>
                         <select name="complaint_to" class="form-select rounded-pill border-0 bg-light shadow-none" required>
                             <option value="admin">System Admin / Management</option>
-                            {% if room %}<option value="owner" selected>Property Owner</option>{% endif %}
+                            {% if room %}
+                                <option value="owner" selected>Property Owner</option>
+                                <option value="staff">Staff / Maintenance</option>
+                            {% endif %}
                         </select>
                     </div>
                     <div class="mb-3">

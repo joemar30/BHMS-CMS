@@ -9,8 +9,8 @@ urlpatterns = [
                                                 # True means that if user is already logged in, it will redirect to homepage
                                                 redirect_authenticated_user=True, form_class = UserLoginForm), name='login'),
 
-    # logout view from auth_view
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    # custom logout view
+    path('logout/', views.user_logout, name='logout'),
 
     # path for register view
     path('register/', views.register, name='register'),

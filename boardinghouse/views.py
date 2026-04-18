@@ -20,6 +20,8 @@ def boardinghouse(request):
         boardinghouses = BoardingHouse.objects.filter(is_archive=False)
     else:
         boardinghouses = BoardingHouse.objects.filter(owner=request.user, is_archive=False)
+    
+    boardinghouses.update(is_viewed=True)
 
     if request.method == 'POST':
         forms = BoardingHouseForms(request.POST, request.FILES)
@@ -177,6 +179,8 @@ def rooms(request):
     else:
         rooms = Room.objects.filter(boardinghouse__owner=request.user, is_archive=False)
     bhouses = BoardingHouse.objects.filter(owner=request.user, is_archive=False)
+    
+    rooms.update(is_viewed=True)
     if request.method == "POST":
         forms = RoomForm(request.POST, request.FILES)
         if "button" in request.POST:
@@ -308,6 +312,12 @@ def manage_rooms(request):
         # Show available users/tenants not yet assigned (or assigned to this owner)
         users = Tenant.objects.filter(room__isnull=True)
         rooms = Room.objects.filter(boardinghouse__owner=request.user)
+    
+    # Clear notifications for room management
+    if tenants.exists():
+        tenants.update(is_viewed=True)
+    if users.exists():
+        users.update(is_viewed=True)
 
     if request.method == "POST":
         if "button" in request.POST:

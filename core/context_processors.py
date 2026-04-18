@@ -1,30 +1,39 @@
-from homepage.models import Feedback, Notice, Complaint
-from tenants.models import Tenant
+from homepage.models import Feedback, Notice, Complaint, Inquiry
+from tenants.models import Tenant, TenantDocument
 from boardinghouse.models import BoardingHouse, Room
 from payments.models import Bills, Payments, TransientPayment
-from django.db.models import Sum
+from django.db.models import Sum, Q
 
 def notifications(request):
     ctx = {}
     if request.user.is_authenticated:
         feedback_notif = Feedback.objects.filter(is_viewed=False, feedback_to=request.user).count()
-        complaint_notif = Complaint.objects.filter(complaint_to=request.user, is_resolved=False).count()
+        complaint_notif = Complaint.objects.filter(Q(complaint_to=request.user) | Q(assigned_staff=request.user), is_viewed=False).count()
         notice_notif = Notice.objects.filter(is_viewed=False).count()
+        inquiry_notif = 0
+        if request.user.is_staff and not request.user.is_superuser:
+            inquiry_notif = Inquiry.objects.filter(is_viewed=False, is_archived=False).count()
         
         ctx.update({
             'feedback_notif': feedback_notif,
             'complaint_notif': complaint_notif,
             'notice': notice_notif,
+            'inquiry_notif': inquiry_notif,
         })
         
         if request.user.is_staff or request.user.is_superuser:
-            from django.db.models import Q
-            ctx['bhouse_count'] = BoardingHouse.objects.filter(owner=request.user, is_archive=False).count() if not request.user.is_superuser else BoardingHouse.objects.filter(is_archive=False).count()
-            ctx['tenant_count'] = Tenant.objects.filter(Q(room__boardinghouse__owner=request.user) | Q(owner=request.user), is_archive=False).distinct().count() if not request.user.is_superuser else Tenant.objects.filter(is_archive=False).count()
-            ctx['room_count'] = Room.objects.filter(boardinghouse__owner=request.user, is_archive=False).count() if not request.user.is_superuser else Room.objects.filter(is_archive=False).count()
-            ctx['manage_room_count'] = Tenant.objects.filter(room__isnull=True).count() if not request.user.is_superuser else Tenant.objects.filter(room__isnull=True).count()
-            ctx['utility_count'] = Bills.objects.filter(room__boardinghouse__owner=request.user).count() if not request.user.is_superuser else Bills.objects.all().count()
-            ctx['collectibles_count'] = Tenant.objects.filter(room__boardinghouse__owner=request.user, room__isnull=False).count() if not request.user.is_superuser else Tenant.objects.filter(room__isnull=False).count()
-            ctx['payment_count'] = Payments.objects.filter(room__boardinghouse__owner=request.user).count() if not request.user.is_superuser else Payments.objects.all().count()
-            ctx['transient_count'] = TransientPayment.objects.filter(room__boardinghouse__owner=request.user).count() if not request.user.is_superuser else TransientPayment.objects.all().count()
+            # Notifications for other sections
+            ctx['bhouse_count'] = BoardingHouse.objects.filter(owner=request.user, is_archive=False, is_viewed=False).count() if not request.user.is_superuser else BoardingHouse.objects.filter(is_archive=False, is_viewed=False).count()
+            ctx['tenant_count'] = Tenant.objects.filter(Q(room__boardinghouse__owner=request.user) | Q(owner=request.user), is_archive=False, is_viewed=False).distinct().count() if not request.user.is_superuser else Tenant.objects.filter(is_archive=False, is_viewed=False).count()
+            ctx['room_count'] = Room.objects.filter(boardinghouse__owner=request.user, is_archive=False, is_viewed=False).count() if not request.user.is_superuser else Room.objects.filter(is_archive=False, is_viewed=False).count()
+            ctx['manage_room_count'] = Tenant.objects.filter(room__isnull=True, is_viewed=False).count() if not request.user.is_superuser else Tenant.objects.filter(room__isnull=True, is_viewed=False).count()
+            ctx['utility_count'] = Bills.objects.filter(room__boardinghouse__owner=request.user, is_viewed=False).count() if not request.user.is_superuser else Bills.objects.filter(is_viewed=False).count()
+            ctx['collectibles_count'] = Tenant.objects.filter(room__boardinghouse__owner=request.user, room__isnull=False, is_viewed=False).count() if not request.user.is_superuser else Tenant.objects.filter(room__isnull=False, is_viewed=False).count()
+            ctx['payment_count'] = Payments.objects.filter(room__boardinghouse__owner=request.user, is_viewed=False).count() if not request.user.is_superuser else Payments.objects.filter(is_viewed=False).count()
+            ctx['transient_count'] = TransientPayment.objects.filter(room__boardinghouse__owner=request.user, is_viewed=False).count() if not request.user.is_superuser else TransientPayment.objects.filter(is_viewed=False).count()
+            
+            if request.user.is_superuser:
+                ctx['document_notif'] = TenantDocument.objects.filter(is_verified=False).count() # Document verification is a task, usually doesn't clear on click but on action
+            else:
+                ctx['document_notif'] = TenantDocument.objects.filter(Q(tenant__room__boardinghouse__owner=request.user) | Q(tenant__owner=request.user), is_verified=False).distinct().count()
     return ctx

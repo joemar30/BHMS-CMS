@@ -10,4 +10,5 @@ urlpatterns = [
     path('payments/transient/<int:id>/', views.transient_info, name='transient-info'),
     path('income/', views.income, name='income'),
     path('collectibles/', views.collectibles, name='collectibles'),
+    path('online-payment/', views.online_payment, name='online-payment'),
     ]

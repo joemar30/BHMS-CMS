@@ -5,7 +5,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="author" content="Untree.co">
-    <link rel="shortcut icon" href="favicon.png">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
+    <link rel="shortcut icon" type="image/png" href="{% static 'img/favicon.png' %}">
 
     <meta name="description" content=""/>
     <meta name="keywords" content="bootstrap, bootstrap5"/>
@@ -25,14 +27,21 @@
      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
      crossorigin=""/>
     <style>
-         *{ font-family: Poppins, sans-serif;
-
-        }
-        #map {
-            height: 300px;
-        }
+         *{ font-family: Poppins, sans-serif; }
+         #map { height: 300px; }
+         
+         /* Dashboard-matching Color Scheme */
+         .menu-bg-wrap { background-color: #0f172a !important; border-radius: 50px; }
+         .site-nav .site-navigation .site-menu > li > a { color: rgba(255,255,255,0.8) !important; }
+         .site-nav .site-navigation .site-menu > li.active > a { color: #fff !important; font-weight: 600; }
+         .btn-primary { background-color: #2563eb !important; border-color: #2563eb !important; }
+         .btn-primary:hover { background-color: #1d4ed8 !important; border-color: #1d4ed8 !important; }
+         .text-primary { color: #0f172a !important; }
+         .site-footer { background: #f8fafc; border-top: 1px solid #e2e8f0; }
+         .hero .heading { color: #fff; text-shadow: 0 4px 15px rgba(0,0,0,0.8); font-weight: 700 !important; }
+         .site-nav .site-navigation .logo { color: #fff !important; font-weight: 700; }
     </style>
-    <title>Bulan Boarding House Management System</title>
+    <title>Pagadian Boarding House Management System</title>
 </head>
 <body>
 

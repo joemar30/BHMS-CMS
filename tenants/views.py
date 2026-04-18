@@ -18,6 +18,10 @@ def tenants_profile(request):
         # Fetch tenants in owner's boarding houses or created by owner directly
         from django.db.models import Q
         tenants = Tenant.objects.filter(Q(room__boardinghouse__owner=request.user) | Q(owner=request.user), is_archive=False).distinct()
+    
+    # Clear notifications for currently listed tenants
+    tenants.update(is_viewed=True)
+    
     if request.method == "POST":
         if request.POST.get("button") == "add":
             try:
@@ -89,3 +93,77 @@ def tenant_archive(request):
         'feedback': Feedback.objects.filter(is_viewed=False, feedback_to=request.user).count(),
         'tenants': tenants,
     })
+
+from .forms import TenantDocumentForm
+from .models import TenantDocument
+from homepage.models import Notice
+
+@user_passes_test(lambda u: u.is_authenticated)
+def tenant_documents(request):
+    is_tenant = not request.user.is_superuser and not request.user.is_staff
+    
+    if is_tenant:
+        try:
+            tenant = Tenant.objects.get(name=request.user)
+            documents = TenantDocument.objects.filter(tenant=tenant)
+        except Tenant.DoesNotExist:
+            tenant = None
+            documents = []
+    else:
+        # For Owners/Admin, show documents related to their tenants
+        if request.user.is_superuser:
+            documents = TenantDocument.objects.all()
+        else:
+            documents = TenantDocument.objects.filter(tenant__room__boardinghouse__owner=request.user)
+
+    if request.method == "POST":
+        if "upload_btn" in request.POST and is_tenant and tenant:
+            form = TenantDocumentForm(request.POST, request.FILES)
+            if form.is_valid():
+                doc = form.save(commit=False)
+                doc.tenant = tenant
+                doc.save()
+                messages.success(request, "Document uploaded successfully! Owner will review it soon.")
+                return redirect('tenant_documents')
+            else:
+                messages.error(request, "Upload failed. Please check the file.")
+        
+        elif "verify_btn" in request.POST and not is_tenant:
+            doc_id = request.POST.get("doc_id")
+            doc = TenantDocument.objects.get(id=doc_id)
+            doc.is_verified = True
+            doc.is_rejected = False
+            doc.save()
+            messages.success(request, f"Document for {doc.tenant.name.get_full_name()} approved.")
+            return redirect('tenant_documents')
+
+        elif "reject_btn" in request.POST and not is_tenant:
+            doc_id = request.POST.get("doc_id")
+            doc = TenantDocument.objects.get(id=doc_id)
+            doc.is_verified = False
+            doc.is_rejected = True
+            doc.save()
+            messages.error(request, f"Document for {doc.tenant.name.get_full_name()} rejected.")
+            return redirect('tenant_documents')
+
+        elif "delete_btn" in request.POST:
+            doc_id = request.POST.get("doc_id")
+            doc = TenantDocument.objects.get(id=doc_id)
+            # Security check: tenants can only delete their own
+            if is_tenant and doc.tenant != tenant:
+                messages.error(request, "Unauthorized.")
+            else:
+                doc.delete()
+                messages.success(request, "Document deleted.")
+            return redirect('tenant_documents')
+
+    form = TenantDocumentForm() if is_tenant else None
+    
+    return render(request, 'tenants/documents.html', {
+        'documents': documents,
+        'form': form,
+        'is_tenant': is_tenant,
+        'feedback': Feedback.objects.filter(is_viewed=False, feedback_to=request.user).count(),
+        'notice': Notice.objects.filter(is_viewed=False).count(),
+    })
+

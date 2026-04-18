@@ -13,9 +13,11 @@ class Tenant(models.Model):
     current_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     previous_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     amount_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    wallet_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     address = models.CharField(max_length=100, null=True, blank=True)
     contact_number = models.CharField(max_length=20, null=True, blank=True)
     is_archive = models.BooleanField(default=False)
+    is_viewed = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name.get_full_name()
@@ -26,6 +28,18 @@ class Tenant(models.Model):
             date_start = date_start.split('-')
             date_start = datetime(int(date_start[0]), int(date_start[1]), int(date_start[2]))
             self.add_month = date_start + relativedelta(months=1)
-        super(Tenant, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
+
+
+class TenantDocument(models.Model):
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='documents')
+    document_name = models.CharField(max_length=100)
+    document_file = models.FileField(upload_to='tenant_documents/')
+    date_uploaded = models.DateTimeField(auto_now_add=True)
+    is_verified = models.BooleanField(default=False)
+    is_rejected = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.tenant.name.get_full_name()} - {self.document_name}"
 
 

@@ -14,7 +14,7 @@
     <script>
 
         let mapOptions = {
-            center: [{{ bhouse.latitude }}, {{ bhouse.longitude }}],
+            center: [parseFloat("{{ bhouse.latitude|default:0 }}"), parseFloat("{{ bhouse.longitude|default:0 }}")],
             zoom: 17
         }
 
@@ -24,7 +24,7 @@
         map.addLayer(layer);
 
 
-        let marker = L.marker([{{ bhouse.latitude }}, {{ bhouse.longitude }}]).addTo(map);
+        let marker = L.marker([parseFloat("{{ bhouse.latitude|default:0 }}"), parseFloat("{{ bhouse.longitude|default:0 }}")]).addTo(map);
 
 
         map.invalidateSize();
@@ -85,6 +85,14 @@
                 </div>
                 <div class="col-lg-4">
                     <h2 class="heading text-primary">{{ room.name }}</h2>
+                    <div class="price mb-3 d-flex justify-content-between align-items-center">
+                        <span class="text-primary font-weight-bold fs-4">₱{{ room.price }}</span>
+                        {% if room.is_full %}
+                            <span class="badge bg-danger rounded-pill px-3 py-2">Fully Occupied</span>
+                        {% else %}
+                            <span class="badge bg-success rounded-pill px-3 py-2">{{ room.space_left }} space{{ room.space_left|pluralize }} left</span>
+                        {% endif %}
+                    </div>
                     <p class="meta">{{ room.boardinghouse.name }} - {{ room.boardinghouse.address }}</p>
                     <p class="text-black-50">{{ bhouse.description }}</p>
                     <div class="specs d-flex mb-4  align-center text-center">

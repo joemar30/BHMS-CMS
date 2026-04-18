@@ -1,0 +1,147 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block page-title %}
+    Document Management
+{% endblock %}
+
+{% block content %}
+<section class="content">
+    <div class="container-fluid">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} border-0 shadow-sm" role="alert">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="row">
+            {% if is_tenant %}
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-primary text-white border-0 py-3">
+                        <h3 class="card-title fw-bold mb-0"><i class="fas fa-upload me-2"></i> Upload New Document</h3>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            {{ form.as_p }}
+                            <div class="d-grid mt-4">
+                                <button type="submit" name="upload_btn" class="btn btn-primary fw-bold">
+                                    <i class="fas fa-cloud-upload-alt me-1"></i> Upload Document
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="{% if is_tenant %}col-md-8{% else %}col-md-12{% endif %}">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h3 class="card-title fw-bold mb-0 text-dark">
+                            <i class="fas fa-file-invoice me-2 text-primary"></i> 
+                            {% if is_tenant %}My Uploaded Documents{% else %}Tenant Credentials & Documents{% endif %}
+                        </h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        {% if not is_tenant %}
+                                        <th class="border-0 px-4">Tenant</th>
+                                        {% endif %}
+                                        <th class="border-0 {% if is_tenant %}px-4{% endif %}">Document Type</th>
+                                        <th class="border-0">Date Uploaded</th>
+                                        <th class="border-0">Status</th>
+                                        <th class="border-0 text-right px-4">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for doc in documents %}
+                                    <tr>
+                                        {% if not is_tenant %}
+                                        <td class="px-4 fw-bold text-dark">{{ doc.tenant.name.get_full_name }}</td>
+                                        {% endif %}
+                                        <td class="{% if is_tenant %}px-4{% endif %}">{{ doc.document_name }}</td>
+                                        <td class="text-muted small">{{ doc.date_uploaded|date:"M d, Y" }}</td>
+                                        <td>
+                                            {% if doc.is_verified %}
+                                                <span class="badge bg-soft-success text-success border border-success px-3 rounded-pill">
+                                                    <i class="fas fa-check-circle me-1"></i> Approved
+                                                </span>
+                                            {% elif doc.is_rejected %}
+                                                <span class="badge bg-soft-danger text-danger border border-danger px-3 rounded-pill">
+                                                    <i class="fas fa-times-circle me-1"></i> Rejected
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-soft-warning text-warning border border-warning px-3 rounded-pill">
+                                                    <i class="fas fa-clock me-1"></i> Pending Review
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-right px-4">
+                                            <div class="btn-group">
+                                                <a href="{{ doc.document_file.url }}" class="btn btn-sm btn-outline-primary" target="_blank" title="View Document">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                
+                                                {% if not is_tenant %}
+                                                    {% if not doc.is_verified %}
+                                                    <form method="post" class="d-inline ms-1">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="doc_id" value="{{ doc.id }}">
+                                                        <button type="submit" name="verify_btn" class="btn btn-sm btn-success" title="Approve">
+                                                            <i class="fas fa-check"></i>
+                                                        </button>
+                                                    </form>
+                                                    {% endif %}
+                                                    
+                                                    {% if not doc.is_rejected %}
+                                                    <form method="post" class="d-inline ms-1">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="doc_id" value="{{ doc.id }}">
+                                                        <button type="submit" name="reject_btn" class="btn btn-sm btn-danger" title="Reject">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </form>
+                                                    {% endif %}
+                                                {% endif %}
+
+                                                <form method="post" class="d-inline ms-1">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="doc_id" value="{{ doc.id }}">
+                                                    <button type="submit" name="delete_btn" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this document?')" title="Delete">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center py-5">
+                                            <div class="mb-3 text-muted" style="font-size: 3rem; opacity: 0.2;">
+                                                <i class="fas fa-folder-open"></i>
+                                            </div>
+                                            <p class="text-muted">No documents found.</p>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    document.getElementById("nav-documents").className += " active";
+</script>
+{% endblock %}

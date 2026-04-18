@@ -57,18 +57,19 @@
 
         <div class="form-group mb-4">
             <label class="small text-muted font-weight-bold">Register as:</label>
-            <select class="form-control custom-select bg-light border-0" name="role" id="role" required>
-                <option value="Tenant">Tenant / Resident</option>
-                <option value="Owner">Property Owner</option>
+            <select class="form-control" name="role" id="role" required style="color: black !important; background-color: #f4f6f9 !important;">
+                <option value="Tenant" style="color: black;">Tenant / Resident</option>
+                <option value="Staff" style="color: black;">Employee / Staff</option>
+                <option value="Owner" style="color: black;">Property Owner</option>
             </select>
         </div>
 
         <div class="form-group mb-4" id="roomSelectionGroup">
             <label class="small text-muted font-weight-bold">Select Vacant Room (Optional):</label>
-            <select class="form-control custom-select bg-light border-0" name="room" id="room">
-                <option value="">-- Let Owner Decide Later --</option>
+            <select class="form-control" name="room" id="room" style="color: black !important; background-color: #f4f6f9 !important;">
+                <option value="" style="color: black;">-- Let Owner Decide Later --</option>
                 {% for room in vacant_rooms %}
-                <option value="{{ room.id }}">{{ room.boardinghouse.name }} - {{ room.name }} (₱{{ room.price }}) ({{ room.male_female }})</option>
+                <option value="{{ room.id }}" style="color: black;">{{ room.boardinghouse.name }} - {{ room.name }} (₱{{ room.price }}) ({{ room.male_female }})</option>
                 {% endfor %}
             </select>
             <small class="text-muted d-block mt-1">Leave as default if you haven't been assigned yet.</small>

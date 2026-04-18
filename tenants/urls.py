@@ -5,4 +5,5 @@ from tenants import views
 urlpatterns = [
     path('tenants/', views.tenants_profile, name='tenants_profile'),
     path('tenants/archive/', views.tenant_archive, name='tenant_archive'),
+    path('tenants/documents/', views.tenant_documents, name='tenant_documents'),
 ]

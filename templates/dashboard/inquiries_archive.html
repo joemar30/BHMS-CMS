@@ -1,0 +1,102 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block page-title %}
+    Archived Inquiries
+{% endblock %}
+
+{% block content %}
+<section class="content pt-3">
+    <div class="container-fluid">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm border-0 mb-3" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="card border-0 shadow-lg" style="border-radius: 15px;">
+            <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+                <h5 class="fw-bold mb-0 text-secondary">Archived Inquiries</h5>
+                <a href="{% url 'inquiries' %}" class="btn btn-primary btn-sm rounded-pill px-3">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Inquiries
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light text-muted small fw-bold">
+                            <tr>
+                                <th class="ps-4">DATE</th>
+                                <th>FULL NAME</th>
+                                <th>CONTACT</th>
+                                <th>MESSAGE</th>
+                                <th>STATUS</th>
+                                <th class="text-center">ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inquiry in inquiries %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="small fw-bold">{{ inquiry.date|date:"M d, Y" }}</div>
+                                    <div class="text-muted" style="font-size: 0.7rem;">{{ inquiry.date|date:"h:i A" }}</div>
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-dark">{{ inquiry.full_name }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge badge-info rounded-pill px-3">{{ inquiry.contact_number }}</span>
+                                </td>
+                                <td>
+                                    <div class="text-truncate" style="max-width: 250px;" title="{{ inquiry.message }}">
+                                        {{ inquiry.message }}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if inquiry.status == 'Pending' %}
+                                        <span class="badge badge-warning text-dark rounded-pill px-3">Pending</span>
+                                    {% elif inquiry.status == 'Approved' %}
+                                        <span class="badge badge-success rounded-pill px-3">Approved</span>
+                                    {% elif inquiry.status == 'Rejected' %}
+                                        <span class="badge badge-danger rounded-pill px-3">Rejected</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center px-4">
+                                    <div class="d-flex justify-content-center gap-2">
+                                        <form method="post" class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="inquiry_id" value="{{ inquiry.id }}">
+                                            <button type="submit" name="button" value="restore" class="btn btn-outline-success btn-sm rounded-pill px-3">
+                                                Restore
+                                            </button>
+                                            <button type="submit" name="button" value="delete" class="btn btn-outline-danger btn-sm rounded-pill px-3" onclick="return confirm('Are you sure you want to delete this permanently?')">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-5">
+                                    <p class="text-muted">No archived inquiries found.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block js %}
+<script>
+    document.getElementById("nav-inquiries").className += " active";
+</script>
+{% endblock %}

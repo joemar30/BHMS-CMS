@@ -1,90 +1,178 @@
 {% extends 'base/base.html' %}
+{% load static %}
 
 {% block page-title %}
-Income Report
+    Consolidated Income Report
 {% endblock %}
 
 {% block style %}
-
+<style>
+    .bond-paper {
+        background: #fff;
+        border: 1px solid #d1d5db;
+        border-radius: 0;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        padding: 40px;
+        min-height: 100vh;
+    }
+    .stat-square {
+        border: 1px solid #000;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 0;
+    }
+    .table-plain {
+        border: 1px solid #000;
+        width: 100%;
+    }
+    .table-plain th {
+        border: 1px solid #000;
+        background: #f3f4f6;
+        padding: 10px;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+    }
+    .table-plain td {
+        border: 1px solid #000;
+        padding: 10px;
+        font-size: 0.85rem;
+    }
+    .receipt-modal-content {
+        background: #fff;
+        padding: 30px;
+        border: 2px solid #000;
+        font-family: monospace;
+    }
+    @media print {
+        .sidebar, .main-header, .btn-receipt, .no-print {
+            display: none !important;
+        }
+        .content-wrapper {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        .bond-paper {
+            border: none;
+            box-shadow: none;
+            padding: 0;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block js %}
 <script>
-    // add active class to nav-dashboard
     document.getElementById("nav-income").className += " active";
-    </script>
-{% endblock %}
-
-
-
-
-
-{% block content %}
-
-    <section class="content">
-        <div class="container-fluid">
-
-
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }}" role="alert">
-                        {{ message }}
-                    </div>
-
-                {% endfor %}
-            {% endif %}
-
-
-
-            <div class="card card-info elevation-2">
-                <br>
-                <div class="col-md-12 table-responsive">
-                    <table id="example1" class="table table-bordered table-hover">
-                        <thead class="btn-cancel">
-                        <tr>
-                            <th>Month</th>
-                            <th>Income</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {% for month in months %}
-                            <tr>
-                                <td>{{ month.month }}</td>
-                                <td>{{ month.income |floatformat:2 }}</td>
-                            </tr>
-
-                        {% endfor %}
-
-
-                        </tbody>
-                    </table>
+    
+    function printReceipt(date, type, payer, amount, room, mode) {
+        let content = `
+            <div style="border: 2px solid #000; padding: 20px;">
+                <div class="text-center mb-4">
+                    <h3 class="fw-bold m-0">OFFICIAL RECEIPT</h3>
+                    <p class="m-0">Boarding House Management System</p>
+                </div>
+                <table class="table table-borderless small">
+                    <tr><td>DATE:</td><td class="text-end fw-bold">${date}</td></tr>
+                    <tr><td>PAYER:</td><td class="text-end fw-bold">${payer}</td></tr>
+                    <tr><td>DESCRIPTION:</td><td class="text-end fw-bold">${type} - ${room}</td></tr>
+                    <tr><td>PAYMENT MODE:</td><td class="text-end fw-bold">${mode}</td></tr>
+                </table>
+                <div style="border-top: 2px solid #000; padding-top: 10px;" class="text-end">
+                    <h4 class="fw-bold">TOTAL: ₱${parseFloat(amount).toFixed(2)}</h4>
+                </div>
+                <div class="text-center mt-5">
+                    <small>Authorized Signature</small><br>
+                    <div style="width: 150px; border-bottom: 1px solid #000; margin: 10px auto;"></div>
                 </div>
             </div>
-        </div>
-    </section>
+        `;
+        $('#receipt-body').html(content);
+        $('#receiptModal').modal('show');
+    }
+</script>
+{% endblock %}
 
-    <!-- Modal -->
-    <div class="modal fade" id="addPayment" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h1 class="modal-title fs-5" id="exampleModalLabel">Add Payments</h1>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+{% block content %}
+<section class="content pt-4">
+    <div class="container-fluid">
+        <div class="bond-paper mx-auto" style="max-width: 900px;">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold text-uppercase m-0">Income Transaction Report</h2>
+                <p class="text-muted">Generated on {% now "F d, Y" %}</p>
+            </div>
+
+            <!-- Summary List -->
+            <div class="row mb-5">
+                <div class="col-md-4">
+                    <div class="stat-square text-center">
+                        <small class="fw-bold text-muted d-block mb-1">TOTAL INCOME</small>
+                        <h4 class="fw-bold m-0">₱{{ total_income|floatformat:2 }}</h4>
+                    </div>
                 </div>
-                <form method="post" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    <div class="modal-body">
-                        {{ form }}
+                <div class="col-md-4">
+                    <div class="stat-square text-center">
+                        <small class="fw-bold text-muted d-block mb-1">TRANSACTIONS</small>
+                        <h4 class="fw-bold m-0">{{ all_transactions|length }}</h4>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-square text-center">
+                        <small class="fw-bold text-muted d-block mb-1">STATUS</small>
+                        <h5 class="fw-bold m-0 text-success">AUDITED</h5>
+                    </div>
+                </div>
+            </div>
 
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="submit" class="btn btn-primary" name="button" value="add_bhouse">Save changes
-                        </button>
-                    </div>
-                </form>
+            <!-- Detailed List (Bond Paper Style Table) -->
+            <h5 class="fw-bold mb-3">CONSOLIDATED TRANSACTION LIST</h5>
+            <table class="table-plain mb-5">
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Date</th>
+                        <th style="width: 35%;">Payer Name</th>
+                        <th style="width: 15%;">Type</th>
+                        <th style="width: 15%;">Room</th>
+                        <th style="width: 20%;" class="text-end">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in all_transactions %}
+                    <tr>
+                        <td>{{ t.date|date:"m/d/Y h:i A" }}</td>
+                        <td>
+                            <strong>{{ t.payer|upper }}</strong><br>
+                            <small class="text-muted">{{ t.mode }}</small>
+                        </td>
+                        <td>{{ t.type }}</td>
+                        <td>{{ t.room }}</td>
+                        <td class="text-end fw-bold">₱{{ t.amount|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr style="background: #f9fafb;">
+                        <td colspan="4" class="text-end fw-bold">GRAND TOTAL</td>
+                        <td class="text-end fw-bold" style="font-size: 1.1rem;">₱{{ total_income|floatformat:2 }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+
+            <div class="no-print mt-5 text-center">
+                <button class="btn btn-dark px-5 py-2 rounded-0 shadow" onclick="window.print()">
+                    <i class="fas fa-print me-2"></i> EXPORT TO PDF / PRINT REPORT
+                </button>
             </div>
         </div>
     </div>
+</section>
 
+<!-- Plain Receipt Modal -->
+<div class="modal fade" id="receiptModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content rounded-0 border-0 p-3" id="receipt-body">
+            <!-- Receipt content -->
+        </div>
+    </div>
+</div>
 {% endblock %}
+

@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'tenants.apps.TenantsConfig',
     'boardinghouse.apps.BoardinghouseConfig',
     'payments.apps.PaymentsConfig',
+    'django.contrib.humanize',
 ]
 
 MIDDLEWARE = [
@@ -155,9 +156,9 @@ LOGOUT_REDIRECT_URL = "landing_page"
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_HOST_USER = 'jaypeedionela55@gmail.com'
-EMAIL_HOST_PASSWORD = 'ghjiuylotauqmtjx'
+EMAIL_HOST_USER = 'joemarflores449@gmail.com'
+EMAIL_HOST_PASSWORD = 'xnwmdgrblvulytbe'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
-DEFAULT_FROM_EMAIL = 'noreply_bbh<no_reply@bbh.com>'
+DEFAULT_FROM_EMAIL = 'Pagadian Boarding House <joemarflores449@gmail.com>'

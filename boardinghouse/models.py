@@ -18,6 +18,7 @@ class BoardingHouse(models.Model):
     image = models.ImageField(upload_to='boardinghouse', blank=True)
     owner = models.ForeignKey('auth.User', related_name='boardinghouses', on_delete=models.CASCADE)
     is_archive = models.BooleanField(default=False)
+    is_viewed = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
@@ -47,10 +48,24 @@ class Room(models.Model):
     image = models.ImageField(upload_to='room', blank=True)
     owner = models.ForeignKey('auth.User', related_name='rooms', on_delete=models.CASCADE)
     is_archive = models.BooleanField(default=False)
+    is_viewed = models.BooleanField(default=False)
 
 
     def __str__(self):
         return self.name
+
+    @property
+    def active_tenants_count(self):
+        return self.tenant_set.filter(is_archive=False).count()
+
+    @property
+    def is_full(self):
+        return self.active_tenants_count >= self.num_bed
+
+    @property
+    def space_left(self):
+        return max(0, self.num_bed - self.active_tenants_count)
+
 
 
 

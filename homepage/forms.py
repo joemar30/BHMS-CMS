@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.models import User
 
-from homepage.models import Feedback, Notice, Complaint
+from homepage.models import Feedback, Notice, Complaint, Inquiry
 
 
 class FeedbackForms(forms.ModelForm):
@@ -14,7 +14,19 @@ class FeedbackForms(forms.ModelForm):
         }
 
 
-class ComplaintForm(forms.ModelForm):
+class InquiryForm(forms.ModelForm):
+    class Meta:
+        model = Inquiry
+        fields = ('full_name', 'email', 'contact_number', 'message',)
+        widgets = {
+            'full_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Full Name', 'required': True}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email Address', 'required': True}),
+            'contact_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Contact Number', 'required': True}),
+            'message': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Tell us what you are looking for...', 'required': True}),
+        }
+
+
+class ComplaintForm(forms.ModelForm) :
     class Meta:
         model = Complaint
         fields = ('issue', 'priority_level')

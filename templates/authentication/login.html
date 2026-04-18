@@ -5,6 +5,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Boarding-House-Management-System</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
+    <link rel="shortcut icon" type="image/png" href="{% static 'img/favicon.png' %}">
     <!-- Google Font: Poppins -->
     <link rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap">
@@ -19,19 +22,18 @@
 <body class="hold-transition login-page">
 <div class="login-box">
     <!-- /.login-logo -->
-    <div class="card card-outline card-info">
-        <div class="card-header text-center">
-                <img src="{% static 'img/LOGOblack.png' %}" alt="Logo" width="150" style="margin-bottom: -15px;">
-
+    <div class="card card-outline shadow-lg border-0 rounded-4" style="border-top: 5px solid #0f172a !important;">
+        <div class="card-header text-center py-4">
+                <img src="{% static 'img/LOGOblack.png' %}" alt="Logo" width="160" style="margin-bottom: -15px;">
         </div>
-        <div class="card-body">
+        <div class="card-body p-4">
             {% if form.non_field_errors %}
-                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                <div class="alert alert-danger border-0 small">{{ form.non_field_errors }}</div>
 
             {% endif %}
             {% if messages %}
                 {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }}" role="alert">
+                    <div class="alert alert-{{ message.tags }} border-0 small" role="alert">
                         {{ message }}
                     </div>
 
@@ -46,32 +48,31 @@
                     <div class="input-group mb-3">
                         {{ form.username }}
                         <div class="input-group-append">
-                            <div class="input-group-text">
-                                <span class="fas fa-user"></span>
+                            <div class="input-group-text bg-light border-0">
+                                <span class="fas fa-user text-muted"></span>
                             </div>
                         </div>
                     </div>
-                    <div class="input-group mb-3">
+                    <div class="input-group mb-4">
                         {{ form.password }}
                         <div class="input-group-append">
-                            <div class="input-group-text toggle-password" style="cursor: pointer;" title="Toggle Password Visibility">
-                                <span class="fas fa-eye-slash"></span>
+                            <div class="input-group-text bg-light border-0 toggle-password" style="cursor: pointer;" title="Toggle Password Visibility">
+                                <span class="fas fa-eye-slash text-muted"></span>
                             </div>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <a href="{% url 'password_reset' %}" tabindex="-1">Forgot Password?</a>
+                    <div class="text-right mb-4">
+                        <a href="{% url 'password_reset' %}" tabindex="-1" class="small fw-bold" style="color: #0f172a;">Forgot Password?</a>
                     </div>
 
-                    <br>
-                    <div class="row">
-                        <div class="col-6 offset-3">
-                            <button type="submit" class="btn btn-block btn-info">Login</button>
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-block py-2 fw-bold text-white shadow" style="background-color: #0f172a !important;">Login</button>
                         </div>
                     </div>
-                    <div class="text-center align-center">
-                        <p>Not registered yet? <a href="{% url 'register' %}">Create an account</a></p>
-                        <a href="{% url 'landing_page' %}" class="btn btn-sm btn-outline-secondary mt-3 rounded-pill px-3"><i class="fas fa-arrow-left mr-1"></i> Back to Home</a>
+                    <div class="text-center">
+                        <p class="small text-muted mb-4">Not registered yet? <a href="{% url 'register' %}" class="fw-bold" style="color: #0f172a;">Create an account</a></p>
+                        <a href="{% url 'landing_page' %}" class="btn btn-sm btn-light border rounded-pill px-4 py-2 small text-muted"><i class="fas fa-arrow-left mr-2"></i> Back to Home</a>
                     </div>
                 </form>
             {% endblock %}
@@ -82,20 +83,29 @@
 </div>
 <!-- /.login-box -->
 <style>
+    body.login-page {
+        background: #f4f7f6 !important;
+    }
     *{
-        font-family: Poppins, sans-serif;
+        font-family: 'Poppins', sans-serif;
+    }
+    .form-control {
+        border: none !important;
+        background-color: #f8f9fa !important;
+        padding: 1.2rem 1rem !important;
+        border-radius: 8px !important;
     }
     .btn{
-        box-shadow: 1px 1px #b6b6b6;
-        transition: transform 0.3s ease-in-out;
+        transition: all 0.3s ease;
+        border-radius: 8px;
     }
     .btn:hover {
-        transform: scale(1.05);
+        opacity: 0.9;
+        transform: translateY(-1px);
     }
-    .card{
-        background-color: #ffffff;
+    .card {
+        border-radius: 15px !important;
     }
-
 </style>
 
 <script>

@@ -26,7 +26,7 @@ class UserLoginForm(AuthenticationForm):
 class UserRegistrationForm(UserCreationForm):
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'username', 'email', 'password1','password2']
+        fields = ['first_name', 'last_name', 'username', 'email']
 
     # uncomment this if you want to change the class/design of the registration form inputs
     def __init__(self, *args, **kwargs):

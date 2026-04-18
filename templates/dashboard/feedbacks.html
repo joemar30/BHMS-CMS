@@ -2,299 +2,391 @@
 {% load static %}
 
 {% block page-title %}
-    Feedbacks Management
+    Messages & Feedback
 {% endblock %}
 
 {% block style %}
 <style>
-    .glass-card {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+    /* Chat Container Layout */
+    .chat-layout {
+        display: flex;
+        height: calc(100vh - 180px);
+        background: #fff;
         border-radius: 15px;
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
-        transition: transform 0.3s ease;
-    }
-    .feedback-bubble {
-        background: #f8f9fa;
-        border-radius: 15px 15px 15px 0;
-        padding: 15px;
-        margin-bottom: 10px;
-        border-left: 5px solid #007bff;
-    }
-    .reply-bubble {
-        background: #e7f3ff;
-        border-radius: 15px 15px 0 15px;
-        padding: 15px;
-        margin-left: 40px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        overflow: hidden;
         margin-bottom: 20px;
-        border-right: 5px solid #28a745;
     }
-    .avatar-circle {
+
+    /* Sidebar - Chat List */
+    .chat-sidebar {
+        width: 300px;
+        background: #f8fafc;
+        border-right: 1px solid #e2e8f0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chat-sidebar-header {
+        padding: 20px;
+        border-bottom: 1px solid #e2e8f0;
+        background: #fff;
+    }
+
+    .chat-list {
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    .chat-item {
+        padding: 15px 20px;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        border-bottom: 1px solid rgba(0,0,0,0.02);
+    }
+
+    .chat-item:hover {
+        background: #edf2f7;
+    }
+
+    .chat-item.active {
+        background: #fff;
+        border-left: 4px solid var(--primary);
+    }
+
+    /* Main Chat Area */
+    .chat-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: #fff;
+        position: relative;
+    }
+
+    .chat-header {
+        padding: 15px 25px;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .chat-messages {
+        flex: 1;
+        padding: 25px;
+        overflow-y: auto;
+        background: #f8fafc;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    /* Message Bubbles */
+    .msg {
+        max-width: 75%;
+        margin-bottom: 10px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .msg-self {
+        align-self: flex-end;
+        align-items: flex-end;
+    }
+
+    .msg-incoming {
+        align-self: flex-start;
+        align-items: flex-start;
+    }
+
+    .bubble {
+        padding: 12px 18px;
+        border-radius: 18px;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        position: relative;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .msg-self .bubble {
+        background: var(--primary);
+        color: #fff;
+        border-bottom-right-radius: 4px;
+    }
+
+    .msg-incoming .bubble {
+        background: #fff;
+        color: #1e293b;
+        border-bottom-left-radius: 4px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .msg-meta {
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-top: 5px;
+        font-weight: 500;
+    }
+
+    /* Chat Input Area */
+    .chat-input-area {
+        padding: 20px 25px;
+        background: #fff;
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .chat-input-container {
+        display: flex;
+        gap: 15px;
+        background: #f1f5f9;
+        padding: 8px 8px 8px 20px;
+        border-radius: 30px;
+        align-items: center;
+    }
+
+    .chat-input-container input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        outline: none;
+        padding: 8px 0;
+        font-size: 0.95rem;
+    }
+
+    .send-btn {
+        background: var(--primary);
+        color: #fff;
         width: 40px;
         height: 40px;
-        background-color: #007bff;
-        color: white;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: bold;
-        margin-right: 10px;
+        border: none;
+        transition: transform 0.2s;
+    }
+
+    .send-btn:hover {
+        transform: scale(1.05);
+        background: var(--primary-hover);
+    }
+
+    /* Avatar */
+    .chat-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: #475569;
+        margin-right: 12px;
+        font-size: 0.85rem;
+    }
+
+    .status-dot {
+        width: 10px;
+        height: 10px;
+        background: #10b981;
+        border: 2px solid #fff;
+        border-radius: 50%;
+        position: absolute;
+        bottom: 2px;
+        right: 2px;
     }
 </style>
 {% endblock %}
 
-{% block js %}
-    <script>
-        document.getElementById("nav-feedbacks").className += " active";
-        
-        $(document).on('click', '.reply-btn', function () {
-            var id = $(this).data('id');
-            var text = $(this).data('text');
-            $('#reply_feedback_id').val(id);
-            $('#original_feedback_text').text(text);
-        });
-
-        $(document).on('click', '.delete', function () {
-            var id = $(this).data('id');
-            $('#delete_id').val(id);
-        });
-
-        $(document).on('click', '.edit', function () {
-            var id = $(this).data('id');
-            var text = $(this).data('text');
-            var recipient = $(this).data('recipient');
-            $('#edit_id').val(id);
-            $('#edit_feedback').val(text);
-            $('#edit_feedback_to').val(recipient);
-        });
-    </script>
-{% endblock %}
-
-{% block modal %}
-    <div class="float-right px-4 pt-3">
-        {% if not request.user.is_superuser %}
-            <button type="button" class="btn btn-primary rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#addFeedback">
-                <i class="fa fa-plus me-2"></i> Submit Feedback
-            </button>
-        {% endif %}
-    </div>
-{% endblock %}
-
 {% block content %}
-<section class="content pt-4">
+<section class="content pt-3">
     <div class="container-fluid">
         {% if messages %}
             {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm border-0 mb-4" role="alert">
-                    <i class="fa fa-{% if message.tags == 'success' %}check-circle{% else %}exclamation-triangle{% endif %} me-2"></i>
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm border-0 mb-3" role="alert">
                     {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="button" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             {% endfor %}
         {% endif %}
 
-        <div class="row">
-            <!-- Messages Section -->
-            <div class="col-12">
-                {% if received_feedbacks %}
-                <div class="glass-card p-4 mb-4">
-                    <h4 class="mb-4 text-primary font-weight-bold"><i class="fa fa-inbox me-2"></i> Received Feedbacks</h4>
-                    {% for feedback in received_feedbacks %}
-                    <div class="feedback-item mb-4">
-                        <div class="d-flex align-items-center mb-2">
-                            <div class="avatar-circle">{{ feedback.user.first_name|first }}{{ feedback.user.last_name|first }}</div>
-                            <div>
-                                <h6 class="mb-0 font-weight-bold">{{ feedback.user.get_full_name }}</h6>
-                                <small class="text-muted">{{ feedback.date|date:"F d, Y h:i A" }}</small>
+        <div class="chat-layout shadow-lg">
+            <!-- Chat Sidebar -->
+            <div class="chat-sidebar d-none d-md-flex">
+                <div class="chat-sidebar-header">
+                    <h5 class="fw-bold mb-0">Conversations</h5>
+                </div>
+                <div class="chat-list" id="sidebarConversations">
+                    {% if request.user.is_superuser or request.user.is_staff %}
+                        <!-- Owner View Sidebar -->
+                        {% for conv_user in conversations %}
+                        <div class="chat-item {% if forloop.first %}active{% endif %} conversation-item" 
+                             data-user-id="{{ conv_user.id }}" 
+                             data-name="{{ conv_user.get_full_name }}"
+                             data-avatar="{{ conv_user.first_name|first|upper }}{{ conv_user.last_name|first|upper }}">
+                            <div class="chat-avatar bg-soft-info text-info">
+                                {{ conv_user.first_name|first|upper }}{{ conv_user.last_name|first|upper }}
+                            </div>
+                            <div class="flex-1 overflow-hidden">
+                                <span class="fw-bold text-dark text-truncate chat-name">{{ conv_user.get_full_name }}</span>
+                                <p class="text-muted small text-truncate mb-0">Tenant</p>
                             </div>
                         </div>
-                        <div class="feedback-bubble shadow-sm">
-                            {{ feedback.feedback }}
+                        {% empty %}
+                        <div class="p-4 text-center text-muted small">No conversations yet</div>
+                        {% endfor %}
+                    {% else %}
+                        <!-- Tenant View Sidebar -->
+                        <div class="chat-item active" data-recipient="admin">
+                            <div class="position-relative">
+                                <div class="chat-avatar bg-soft-primary text-primary">SY</div>
+                                <div class="status-dot"></div>
+                            </div>
+                            <div class="flex-1 overflow-hidden">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold text-dark text-truncate chat-name">System Admin</span>
+                                    <small class="text-muted" style="font-size: 0.7rem;">Active</small>
+                                </div>
+                                <p class="text-muted small text-truncate mb-0">Help Desk & Feedback</p>
+                            </div>
                         </div>
-                        
-                        {% if feedback.reply %}
-                        <div class="reply-bubble shadow-sm">
-                            <div class="font-weight-bold text-success mb-1 small uppercase"><i class="fa fa-reply me-1"></i> Your Reply ({{ feedback.reply_date|date:"M d, Y" }})</div>
-                            {{ feedback.reply }}
-                        </div>
-                        {% else %}
-                        <div class="text-right mt-n2">
-                            <button class="btn btn-sm btn-link text-primary font-weight-bold reply-btn" 
-                                    data-bs-toggle="modal" data-bs-target="#replyModal"
-                                    data-id="{{ feedback.id }}" data-text="{{ feedback.feedback }}">
-                                <i class="fa fa-reply"></i> Reply
-                            </button>
+                        {% if room %}
+                        <div class="chat-item" data-recipient="owner">
+                            <div class="chat-avatar bg-soft-success text-success">PO</div>
+                            <div class="flex-1 overflow-hidden">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold text-dark text-truncate chat-name">Property Owner</span>
+                                </div>
+                                <p class="text-muted small text-truncate mb-0">Direct Owner Contact</p>
+                            </div>
                         </div>
                         {% endif %}
-                    </div>
-                    {% endfor %}
+                    {% endif %}
                 </div>
+            </div>
+
+            <!-- Main Chat View -->
+            <div class="chat-main">
+                <div class="chat-header">
+                    <div class="d-flex align-items-center">
+                        <div class="chat-avatar bg-blue text-white shadow-sm" id="active-chat-avatar">SA</div>
+                        <div>
+                            <h6 class="fw-bold mb-0" id="active-chat-name">System Admin</h6>
+                            <small class="text-success" id="active-chat-status"><i class="fas fa-circle me-1" style="font-size: 0.6rem;"></i> Connected</small>
+                        </div>
+                    </div>
+                    <div class="chat-actions">
+                        <button class="btn btn-light btn-sm rounded-circle p-2" title="Refresh messages" onclick="location.reload()">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="chat-messages" id="chatArea">
+                    {% if not my_feedbacks and not received_feedbacks %}
+                        <div class="text-center my-auto px-5">
+                            <div class="mb-4 text-muted opacity-25" style="font-size: 4rem;">
+                                <i class="fas fa-comments"></i>
+                            </div>
+                            <h5 class="fw-bold text-dark">No Messages Yet</h5>
+                            <p class="text-muted small">Type a feedback or question below to start a conversation with the management.</p>
+                        </div>
+                    {% endif %}
+
+                    {% if received_feedbacks %}
+                        <!-- Admin/Owner View: Tag messages by sender -->
+                        {% for f in received_feedbacks %}
+                            <div class="msg msg-incoming conversation-messages user-{{ f.user.id }}" data-msg-id="{{ f.id }}">
+                                <div class="bubble">{{ f.feedback }}</div>
+                                <div class="msg-meta">From: {{ f.user.get_full_name }} • {{ f.date|date:"h:i A" }}</div>
+                            </div>
+                            {% if f.reply %}
+                            <div class="msg msg-self conversation-messages user-{{ f.user.id }}">
+                                <div class="bubble">{{ f.reply }}</div>
+                                <div class="msg-meta">You • {{ f.reply_date|date:"h:i A" }}</div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <!-- Tenant View: Tag messages by recipient -->
+                        {% for f in my_feedbacks %}
+                            <div class="msg msg-self conversation-messages recipient-{% if f.feedback_to.is_superuser %}admin{% else %}owner{% endif %}">
+                                <div class="bubble">
+                                    {{ f.feedback }}
+                                    <div class="d-flex gap-2 mt-1 opacity-50 justify-content-end" style="font-size: 0.7rem;">
+                                        <a href="javascript:void(0)" class="text-white edit" data-bs-toggle="modal" data-bs-target="#editFeedback" data-id="{{ f.id }}" data-text="{{ f.feedback }}" data-recipient="{% if f.feedback_to.is_superuser %}admin{% else %}owner{% endif %}"><i class="fa fa-pen"></i></a>
+                                        <a href="javascript:void(0)" class="text-white delete" data-bs-toggle="modal" data-bs-target="#deleteFeedback" data-id="{{ f.id }}"><i class="fa fa-trash"></i></a>
+                                    </div>
+                                </div>
+                                <div class="msg-meta">Sent to {{ f.feedback_to|title }} • {{ f.date|date:"h:i A" }}</div>
+                            </div>
+                            {% if f.reply %}
+                            <div class="msg msg-incoming conversation-messages recipient-{% if f.feedback_to.is_superuser %}admin{% else %}owner{% endif %}">
+                                <div class="bubble">{{ f.reply }}</div>
+                                <div class="msg-meta">Response • {{ f.reply_date|date:"h:i A" }}</div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </div>
+
+                <!-- Input area for tenants -->
+                {% if not request.user.is_superuser and not request.user.is_staff %}
+                <form method="post" class="chat-input-area">
+                    {% csrf_token %}
+                    <div class="chat-input-container shadow-sm border">
+                        <select name="feedback_to" id="to_select" class="form-select border-0 bg-transparent py-0 px-2 fw-bold text-primary" style="width: auto; font-size: 0.85rem; box-shadow: none;">
+                            <option value="admin">@Admin</option>
+                            {% if room %}<option value="owner">@Owner</option>{% endif %}
+                        </select>
+                        <div class="vr mx-1 my-2 opacity-10"></div>
+                        <input type="text" name="feedback" placeholder="Type your feedback here..." required>
+                        <button type="submit" name="button" value="add" class="send-btn shadow">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </form>
                 {% endif %}
 
-                {% if my_feedbacks %}
-                <div class="glass-card p-4">
-                    <h4 class="mb-4 text-indigo font-weight-bold"><i class="fa fa-paper-plane me-2"></i> My Feedback History</h4>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle border-0">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th class="border-0">Date</th>
-                                    <th class="border-0">Recipient</th>
-                                    <th class="border-0">Message</th>
-                                    <th class="border-0 text-center">Status</th>
-                                    <th class="border-0 text-end">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for feedback in my_feedbacks %}
-                                <tr>
-                                    <td>{{ feedback.date|date:"M d, Y" }}</td>
-                                    <td><span class="badge bg-info-soft text-info rounded-pill px-3">{{ feedback.feedback_to|title }}</span></td>
-                                    <td class="text-truncate" style="max-width: 250px;">{{ feedback.feedback }}</td>
-                                    <td class="text-center">
-                                        {% if feedback.reply %}
-                                            <span class="badge bg-success rounded-pill px-3">Replied</span>
-                                        {% else %}
-                                            <span class="badge bg-light text-muted rounded-pill px-3 border">Sent</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-end">
-                                        <button class="btn btn-sm btn-outline-warning rounded-circle edit" 
-                                                data-bs-toggle="modal" data-bs-target="#editFeedback"
-                                                data-id="{{ feedback.id }}" data-text="{{ feedback.feedback }}"
-                                                data-recipient="{% if feedback.feedback_to.is_superuser %}admin{% else %}owner{% endif %}">
-                                            <i class="fa fa-edit"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger rounded-circle delete" 
-                                                data-bs-toggle="modal" data-bs-target="#deleteFeedback"
-                                                data-id="{{ feedback.id }}">
-                                            <i class="fa fa-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                                {% if feedback.reply %}
-                                <tr class="bg-light-50">
-                                    <td colspan="5" class="py-2 px-4 shadow-none">
-                                        <div class="small text-success font-weight-bold"><i class="fa fa-comment-dots me-1"></i> Response:</div>
-                                        <div class="ps-3 border-start border-success border-2 small">{{ feedback.reply }}</div>
-                                    </td>
-                                </tr>
-                                {% endif %}
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                <!-- Input area for Admin/Owner -->
+                {% if request.user.is_superuser or request.user.is_staff %}
+                <form id="ownerInlineReplyForm" method="post" class="chat-input-area">
+                    {% csrf_token %}
+                    <div class="chat-input-container shadow-sm border">
+                        <div class="px-3 fw-bold text-primary" style="font-size: 0.85rem;">Reply:</div>
+                        <div class="vr mx-1 my-2 opacity-10"></div>
+                        <input type="text" name="reply" id="ownerReplyInput" placeholder="Select a conversation..." required disabled>
+                        <button type="button" onclick="submitInlineReply()" class="send-btn shadow" id="ownerSendBtn" disabled>
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
                     </div>
-                </div>
+                </form>
                 {% endif %}
             </div>
         </div>
     </div>
 </section>
 
-<!-- Modals -->
-<div class="modal fade" id="addFeedback" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title font-weight-bold">New Feedback</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="post">
-                {% csrf_token %}
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label font-weight-bold small text-muted">SEND TO</label>
-                        {% if request.user.is_superuser or request.user.is_staff %}
-                        <select name="feedback_to" class="form-select rounded-pill bg-light border-0 shadow-none">
-                            <option selected value="admin">Admin</option>
-                        </select>
-                        {% else %}
-                        <select name="feedback_to" class="form-select rounded-pill bg-light border-0 shadow-none" required>
-                            <option value="" disabled selected>Select Recipient</option>
-                            <option value="admin">System Admin</option>
-                            {% if room %}<option value="owner">Property Owner</option>{% endif %}
-                        </select>
-                        {% endif %}
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label font-weight-bold small text-muted">YOUR MESSAGE</label>
-                        {{ form.feedback }}
-                    </div>
-                </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4" name="button" value="add">Submit</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
+<!-- Essential Modals (Stylized) -->
 <div class="modal fade" id="replyModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title font-weight-bold">Reply to Feedback</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-body p-4">
+                <h5 class="fw-bold mb-3"><i class="fas fa-reply text-primary me-2"></i>Send Response</h5>
+                <div class="bg-light p-3 rounded mb-3 small italic border-start border-primary border-4" id="original_feedback_text"></div>
+                <form id="replyForm" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="feedback_id" id="reply_feedback_id">
+                    <textarea name="reply" class="form-control rounded-4 border-0 bg-light p-3 mb-3" rows="3" placeholder="Type your reply..." required></textarea>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-light rounded-pill flex-fill" data-bs-dismiss="modal">Discard</button>
+                        <button type="button" class="btn btn-primary rounded-pill flex-fill px-4" onclick="submitReply()">Send Reply</button>
+                    </div>
+                </form>
             </div>
-            <form id="replyForm" method="post">
-                {% csrf_token %}
-                <input type="hidden" name="feedback_id" id="reply_feedback_id">
-                <div class="modal-body">
-                    <div class="p-3 bg-light rounded-3 mb-3 small italic" id="original_feedback_text"></div>
-                    <div class="mb-0">
-                        <label class="form-label font-weight-bold small text-muted">YOUR REPLY</label>
-                        <textarea name="reply" class="form-control rounded-3" rows="4" required placeholder="Type your response..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer border-0 text-center justify-content-center pt-0">
-                    <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Discard</button>
-                    <button type="button" class="btn btn-success rounded-pill px-5 shadow-sm" onclick="submitReply()">Send Reply</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<script>
-function submitReply() {
-    const id = $('#reply_feedback_id').val();
-    const form = $('#replyForm');
-    form.attr('action', '/feedbacks/reply/' + id + '/');
-    form.submit();
-}
-</script>
-
-<!-- Keep existing edit/delete modals with modern styling -->
-<div class="modal fade" id="editFeedback" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title font-weight-bold">Edit Feedback</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="post">
-                {% csrf_token %}
-                <div class="modal-body">
-                    <input type="hidden" name="edit_id" id="edit_id">
-                    <div class="mb-3">
-                        <label class="form-label font-weight-bold small text-muted">RECIPIENT</label>
-                        <select name="edit_feedback_to" id="edit_feedback_to" class="form-select rounded-pill bg-light border-0 shadow-none">
-                            <option value="admin">Admin</option>
-                            <option value="owner">Owner</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label font-weight-bold small text-muted">MESSAGE</label>
-                        <textarea name="edit_feedback" id="edit_feedback" class="form-control rounded-3" rows="4" required></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer border-0">
-                    <button type="submit" class="btn btn-primary rounded-pill px-4" name="button" value="edit">Update</button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
@@ -302,24 +394,162 @@ function submitReply() {
 <div class="modal fade" id="deleteFeedback" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
-            <div class="modal-header border-0 pb-0">
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="post">
-                {% csrf_token %}
-                <div class="modal-body text-center py-4">
-                    <i class="fa fa-trash-alt text-danger fa-3x mb-3"></i>
-                    <h5 class="font-weight-bold mb-2">Delete Message?</h5>
-                    <p class="text-muted small">This action cannot be undone.</p>
+            <div class="modal-body text-center p-4">
+                <div class="mb-3 text-danger"><i class="fas fa-trash-alt fa-3x"></i></div>
+                <h6 class="fw-bold">Delete message?</h6>
+                <p class="text-muted small mb-4">This will remove the message from your history.</p>
+                <form method="post">
+                    {% csrf_token %}
                     <input type="hidden" name="delete_id" id="delete_id">
-                </div>
-                <div class="modal-footer border-0 justify-content-center pt-0">
-                    <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger rounded-pill px-4" name="button" value="delete">Delete</button>
-                </div>
-            </form>
+                    <div class="d-grid gap-2">
+                        <button type="submit" name="button" value="delete" class="btn btn-danger rounded-pill">Delete Permanently</button>
+                        <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
 
+<div class="modal fade" id="editFeedback" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-body p-4">
+                <h5 class="fw-bold mb-3">Edit Message</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="edit_id" id="edit_id">
+                    <div class="mb-3">
+                        <label class="small fw-bold text-muted">RECIPIENT</label>
+                        <select name="edit_feedback_to" id="edit_feedback_to" class="form-select rounded-pill bg-light border-0">
+                            <option value="admin">Admin</option>
+                            <option value="owner">Owner</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small fw-bold text-muted">EDIT TEXT</label>
+                        <textarea name="edit_feedback" id="edit_feedback" class="form-control rounded-4 border-0 bg-light p-3" rows="3" required></textarea>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" name="button" value="edit" class="btn btn-primary rounded-pill">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block js %}
+<script>
+    document.getElementById("nav-feedbacks").className += " active";
+    
+    // Auto-scroll to bottom of chat
+    const chatArea = document.getElementById('chatArea');
+    chatArea.scrollTop = chatArea.scrollHeight;
+
+    // Handle reply modal
+    $(document).on('click', '.reply-btn', function () {
+        var id = $(this).data('id');
+        var text = $(this).data('text');
+        $('#reply_feedback_id').val(id);
+        $('#original_feedback_text').text('"' + text + '"');
+    });
+
+    // Handle delete modal
+    $(document).on('click', '.delete', function () {
+        var id = $(this).data('id');
+        $('#delete_id').val(id);
+    });
+
+    // Handle edit modal
+    $(document).on('click', '.edit', function () {
+        var id = $(this).data('id');
+        var text = $(this).data('text');
+        var recipient = $(this).data('recipient');
+        $('#edit_id').val(id);
+        $('#edit_feedback').val(text);
+        $('#edit_feedback_to').val(recipient);
+    });
+
+    function submitReply() {
+        const id = $('#reply_feedback_id').val();
+        const form = $('#replyForm');
+        form.attr('action', '/feedbacks/reply/' + id + '/');
+        form.submit();
+    }
+
+    // Sidebar chat switching logic
+    $('.chat-item').on('click', function() {
+        $('.chat-item').removeClass('active');
+        $(this).addClass('active');
+        
+        const isOwner = "{{ request.user.is_superuser|lower }}" === "true" || "{{ request.user.is_staff|lower }}" === "true";
+        
+        if (!isOwner) {
+            // Tenant Logic
+            const recipient = $(this).data('recipient');
+            const name = $(this).find('.chat-name').text();
+            const avatar = $(this).find('.chat-avatar').text();
+            
+            $('#to_select').val(recipient).change();
+            $('#active-chat-name').text(name);
+            $('#active-chat-avatar').text(avatar);
+            
+            if(avatar == 'SA' || avatar == 'SY') {
+                $('#active-chat-avatar').removeClass('bg-soft-success text-success').addClass('bg-blue text-white');
+                $('#active-chat-status').html('<i class="fas fa-circle me-1" style="font-size: 0.6rem;"></i> Connected');
+            } else {
+                $('#active-chat-avatar').removeClass('bg-blue text-white').addClass('bg-soft-success text-success');
+                $('#active-chat-status').html('<i class="fas fa-history me-1" style="font-size: 0.6rem;"></i> Typically responds in 24h');
+            }
+
+            // Filter messages by recipient
+            $('.conversation-messages').hide();
+            $('.recipient-' + recipient).show();
+        } else {
+            // Owner/Admin Logic
+            const userId = $(this).data('user-id');
+            const name = $(this).data('name');
+            const avatar = $(this).data('avatar');
+
+            $('#active-chat-name').text(name);
+            $('#active-chat-avatar').text(avatar);
+            $('#active-chat-avatar').removeClass('bg-blue text-white').addClass('bg-soft-info text-info');
+            $('#active-chat-status').html('<i class="fas fa-circle me-1" style="font-size: 0.6rem;"></i> Chatting with Tenant');
+
+            // Filter messages by sender
+            $('.conversation-messages').hide();
+            const visibleMessages = $('.user-' + userId);
+            visibleMessages.show();
+
+            // Setup Inline Reply Box
+            const lastMsg = visibleMessages.filter('.msg-incoming').last();
+            if (lastMsg.length > 0) {
+                const msgId = lastMsg.data('msg-id');
+                $('#ownerInlineReplyForm').attr('action', '/feedbacks/reply/' + msgId + '/');
+                $('#ownerReplyInput').attr('placeholder', 'Reply to ' + name + '...').prop('disabled', false);
+                $('#ownerSendBtn').prop('disabled', false);
+            } else {
+                $('#ownerReplyInput').attr('placeholder', 'No messages to reply to...').prop('disabled', true);
+                $('#ownerSendBtn').prop('disabled', true);
+            }
+        }
+
+        $('#chatArea').fadeOut(50).fadeIn(150);
+        chatArea.scrollTop = chatArea.scrollHeight;
+    });
+
+    // Initialize the view based on default active item
+    $(document).ready(function() {
+        $('.chat-item.active').click();
+    });
+
+    function submitInlineReply() {
+        if($('#ownerReplyInput').val().trim() !== "") {
+            $('#ownerInlineReplyForm').submit();
+        }
+    }
+</script>
 {% endblock %}

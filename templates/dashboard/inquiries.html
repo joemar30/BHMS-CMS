@@ -1,0 +1,282 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block page-title %}
+    User Inquiries
+{% endblock %}
+
+{% block content %}
+<section class="content pt-3">
+    <div class="container-fluid">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm border-0 mb-3" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="card border-0 shadow-lg" style="border-radius: 15px;">
+            <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+                <h5 class="fw-bold mb-0 text-primary">Inquiry Management</h5>
+                <a href="{% url 'inquiries_archive' %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                    <i class="fas fa-archive me-1"></i> View Archive
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light text-muted small fw-bold">
+                            <tr>
+                                <th class="ps-4">DATE</th>
+                                <th>FULL NAME</th>
+                                <th>CONTACT</th>
+                                <th>MESSAGE</th>
+                                <th>STATUS</th>
+                                <th class="text-center">ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inquiry in inquiries %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="small fw-bold">{{ inquiry.date|date:"M d, Y" }}</div>
+                                    <div class="text-muted" style="font-size: 0.7rem;">{{ inquiry.date|date:"h:i A" }}</div>
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-dark">{{ inquiry.full_name }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge badge-info rounded-pill px-3">{{ inquiry.contact_number }}</span>
+                                </td>
+                                <td>
+                                    <div class="text-truncate" style="max-width: 250px;" title="{{ inquiry.message }}">
+                                        {{ inquiry.message }}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if inquiry.status == 'Pending' %}
+                                        <span class="badge badge-warning text-dark rounded-pill px-3">Pending</span>
+                                    {% elif inquiry.status == 'Approved' %}
+                                        <span class="badge badge-success rounded-pill px-3">Approved</span>
+                                    {% elif inquiry.status == 'Rejected' %}
+                                        <span class="badge badge-danger rounded-pill px-3">Rejected</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center px-4">
+                                    <div class="d-flex justify-content-center gap-2">
+                                        <!-- Original Manage Button -->
+                                        <button class="btn btn-primary btn-sm rounded-pill px-3" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#inquiryModal" 
+                                                data-id="{{ inquiry.id }}"
+                                                data-name="{{ inquiry.full_name }}"
+                                                data-email="{{ inquiry.email|default:'' }}"
+                                                data-contact="{{ inquiry.contact_number }}"
+                                                data-message="{{ inquiry.message }}"
+                                                data-reply="{{ inquiry.reply|default:'' }}"
+                                                data-status="{{ inquiry.status }}">
+                                            Manage
+                                        </button>
+                                        
+                                        <!-- New Gmail Compose Button -->
+                                        <button class="btn btn-outline-primary btn-sm rounded-circle" 
+                                                style="width: 32px; height: 32px; padding: 0;"
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#gmailComposeModal" 
+                                                data-id="{{ inquiry.id }}"
+                                                data-name="{{ inquiry.full_name }}"
+                                                data-email="{{ inquiry.email|default:'' }}"
+                                                title="Send Room Inquiry Form">
+                                            <i class="fas fa-envelope"></i>
+                                        </button>
+
+                                        <form method="post" class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="inquiry_id" value="{{ inquiry.id }}">
+                                            <button type="submit" name="button" value="archive" class="btn btn-outline-danger btn-sm rounded-pill" title="Archive">
+                                                <i class="fas fa-archive"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-5">
+                                    <div class="opacity-25 mb-3" style="font-size: 3rem;">
+                                        <i class="fas fa-question-circle"></i>
+                                    </div>
+                                    <p class="text-muted">No inquiries found.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Gmail-style Compose Modal -->
+<div class="modal fade" id="gmailComposeModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 8px; overflow: hidden;">
+            <div class="modal-header bg-dark text-white d-flex justify-content-between align-items-center py-2 px-3" style="border-bottom: 0;">
+                <h6 class="modal-title fw-bold" style="font-size: 0.9rem;">New Message</h6>
+                <button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="inquiry_id" id="composeInquiryId">
+                <div class="modal-body p-0">
+                    <div class="px-3 py-2 border-bottom d-flex align-items-center">
+                        <span class="text-muted small me-2" style="min-width: 40px;">To</span>
+                        <input type="text" name="to_email" id="composeToEmail" class="form-control border-0 p-0 shadow-none fw-bold" readonly placeholder="Recipient">
+                    </div>
+                    <div class="px-3 py-2 border-bottom d-flex align-items-center">
+                        <span class="text-muted small me-2" style="min-width: 40px;">Subject</span>
+                        <input type="text" name="subject" id="composeSubject" class="form-control border-0 p-0 shadow-none fw-bold" placeholder="Subject" value="Boarding House Reservation & Details Form">
+                    </div>
+                    <div class="p-3">
+                        <textarea name="gmail_body" id="composeBody" class="form-control border-0 p-0 shadow-none" rows="12" style="resize: none; font-family: 'Outfit', sans-serif; font-size: 0.95rem;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-3 d-flex justify-content-start gap-2 bg-light">
+                    <button type="submit" name="button" value="send_gmail" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" style="min-width: 100px;">
+                        Send
+                    </button>
+                    <button type="button" class="btn btn-light rounded-circle p-2" title="Discard" data-bs-dismiss="modal">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <div class="ms-auto d-flex gap-3 text-muted">
+                        <i class="fas fa-font"></i>
+                        <i class="fas fa-paperclip"></i>
+                        <i class="fas fa-link"></i>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Inquiry Management Modal -->
+<div class="modal fade" id="inquiryModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 15px; overflow: hidden;">
+            <div class="modal-header bg-dark text-white border-0 py-3">
+                <h5 class="modal-title fw-bold" id="modalTitle">Inquiry Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <label class="small fw-bold text-muted mb-1 d-block">FROM</label>
+                        <h5 class="fw-bold mb-0" id="modalName">Name</h5>
+                        <div class="small text-primary" id="modalEmail">email@example.com</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="small fw-bold text-muted mb-1 d-block">CONTACT NUMBER</label>
+                        <h5 class="fw-bold mb-0" id="modalContact">Contact</h5>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="small fw-bold text-muted mb-1 d-block">INQUIRY MESSAGE</label>
+                    <div class="bg-light p-3 border" style="border-radius: 10px;">
+                        <p class="mb-0" id="modalMessage">Message content here...</p>
+                    </div>
+                </div>
+
+                <hr class="opacity-10 my-4">
+
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="inquiry_id" id="modalInquiryId">
+                    
+                    <div class="form-group mb-4">
+                        <label class="small fw-bold text-muted mb-1 d-block">REPLY / NOTES</label>
+                        <textarea name="reply" id="modalReply" class="form-control border-0 bg-light p-3" rows="3" style="border-radius: 10px;" placeholder="Type your response or internal notes here..."></textarea>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-4 mb-2">
+                            <button type="submit" name="button" value="reply" class="btn btn-primary btn-block py-2 fw-bold" style="border-radius: 10px;">
+                                <i class="fas fa-paper-plane mr-2"></i>SAVE REPLY
+                            </button>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <button type="submit" name="button" value="approve" class="btn btn-success btn-block py-2 fw-bold" style="border-radius: 10px;">
+                                <i class="fas fa-check-circle mr-2"></i>APPROVE
+                            </button>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <button type="submit" name="button" value="reject" class="btn btn-danger btn-block py-2 fw-bold" style="border-radius: 10px;">
+                                <i class="fas fa-times-circle mr-2"></i>REJECT
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block js %}
+<script>
+    document.getElementById("nav-inquiries").classList.add("active");
+    const inquiryModal = document.getElementById('inquiryModal');
+    if (inquiryModal) {
+        inquiryModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const id = button.getAttribute('data-id');
+            const name = button.getAttribute('data-name');
+            const email = button.getAttribute('data-email');
+            const contact = button.getAttribute('data-contact');
+            const message = button.getAttribute('data-message');
+            const reply = button.getAttribute('data-reply');
+            const status = button.getAttribute('data-status');
+
+            const modal = this;
+            modal.querySelector('#modalInquiryId').value = id;
+            modal.querySelector('#modalName').textContent = name;
+            modal.querySelector('#modalEmail').textContent = email;
+            modal.querySelector('#modalContact').textContent = contact;
+            modal.querySelector('#modalMessage').textContent = message;
+            modal.querySelector('#modalReply').value = reply;
+            
+            modal.querySelector('#modalTitle').textContent = 'Inquiry from ' + name + ' (' + status + ')';
+        });
+    }
+
+    const gmailModal = document.getElementById('gmailComposeModal');
+    if (gmailModal) {
+        gmailModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const id = button.getAttribute('data-id');
+            const name = button.getAttribute('data-name');
+            const email = button.getAttribute('data-email');
+
+            this.querySelector('#composeInquiryId').value = id;
+            this.querySelector('#composeToEmail').value = email;
+            
+            const template = `Hello ${name},\n\n` +
+                `Thank you for reaching out! To better assist you in securing a room, please fill out the following details:\n\n` +
+                `1. Move-in Date:\n` +
+                `2. Preferred Room Type (Single/Double/Shared):\n` +
+                `3. Number of Occupants:\n` +
+                `4. Duration of Stay:\n` +
+                `5. Any specific requirements (AC, Near exit, etc.):\n\n` +
+                `Once we receive these details, we can proceed with your reservation.\n\n` +
+                `Best regards,\n` +
+                `Pagadian Boarding House Management`;
+            
+            this.querySelector('#composeBody').value = template;
+        });
+    }
+</script>
+{% endblock %}

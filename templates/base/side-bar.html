@@ -13,6 +13,7 @@
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu"
                 data-accordion="false">
 
+                {% if not request.user.staff_profile %}
                 <li class="nav-item">
                     <a href="{% url 'dashboard' %}" class="nav-link" id="nav-dashboard">
                         <i class="nav-icon fa fa-tachometer-alt"></i>
@@ -21,6 +22,7 @@
                         </p>
                     </a>
                 </li>
+                {% endif %}
                 {% if request.user.is_superuser %}
                     <li class="nav-item">
                         <a href="{% url 'users' %}" class="nav-link" id="nav-users">
@@ -57,6 +59,19 @@
                         </p>
                     </a>
                 </li>
+                {% if request.user.is_staff and not request.user.is_superuser %}
+                <li class="nav-item">
+                    <a href="{% url 'inquiries' %}" class="nav-link" id="nav-inquiries">
+                        <i class="nav-icon fa fa-question-circle"></i>
+                        <p>
+                            User Inquiry
+                            {% if request.user.is_authenticated and inquiry_notif != 0 %}
+                                <span class="badge badge-primary">{{ inquiry_notif }}</span>
+                            {% endif %}
+                        </p>
+                    </a>
+                </li>
+                {% endif %}
                 <li class="nav-item">
                     <a href="{% url 'complaints' %}" class="nav-link" id="nav-complaints">
                         <i class="nav-icon fa fa-exclamation-circle"></i>
@@ -68,6 +83,25 @@
                         </p>
                     </a>
                 </li>
+                {% if request.user.staff_profile.is_verified %}
+                    <hr>
+                    <li class="nav-item">
+                        <a href="{% url 'dashboard_staff' %}" class="nav-link" id="nav-staff-dashboard">
+                            <i class="nav-icon fa fa-briefcase"></i>
+                            <p>
+                                Staff Dashboard
+                            </p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'complaints' %}" class="nav-link" id="nav-staff-tasks">
+                            <i class="nav-icon fa fa-clipboard-check"></i>
+                            <p>
+                                Assigned Tasks
+                            </p>
+                        </a>
+                    </li>
+                {% endif %}
 
 
 
@@ -156,7 +190,7 @@
                     {% endif %}
                 {% endif %}
 
-                {% if not request.user.is_superuser %}
+                {% if not request.user.is_superuser and not request.user.staff_profile %}
 
                     <li class="nav-item">
                         <a href="{% url 'payments' %}" class="nav-link" id="payments">
@@ -194,14 +228,28 @@
                     {% endif %}
                 {% endif %}
                 <li class="nav-item">
-                    <a href="{% url 'myaccount' %}" class="nav-link" id="nav-income">
+                    <a href="{% url 'myaccount' %}" class="nav-link" id="nav-account">
                         <i class="nav-icon fa fa-user-edit"></i>
                         <p>
                             My Profile
                         </p>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="{% url 'tenant_documents' %}" class="nav-link" id="nav-documents">
+                        <i class="nav-icon fa fa-file-contract"></i>
+                        <p>
+                            Documents
+                            {% if request.user.is_staff or request.user.is_superuser %}
+                                {% if document_notif != 0 %}
+                                    <span class="badge badge-warning right">{{ document_notif }}</span>
+                                {% endif %}
+                            {% endif %}
+                        </p>
+                    </a>
+                </li>
 
+                {% if not request.user.staff_profile %}
                 <li class="nav-item">
                     <a href="{% url 'landing_page' %}" class="nav-link">
                         <i class="nav-icon fa fa-arrow-left"></i>
@@ -210,6 +258,7 @@
                         </p>
                     </a>
                 </li>
+                {% endif %}
 
             </ul>
         </nav>

@@ -24,6 +24,9 @@ def utility_bill(request):
         rooms = Room.objects.filter(boardinghouse__owner=request.user)
         bills = Bills.objects.filter(room__boardinghouse__owner=request.user)
         form_room = Room.objects.filter(boardinghouse__owner=request.user, is_archive=False)
+    
+    # Clear notifications for bills
+    bills.update(is_viewed=True)
 
     if request.method == "POST":
         if "button" in request.POST:
@@ -78,28 +81,32 @@ def utility_bill(request):
 
 @user_passes_test(lambda u: not u.is_superuser)
 def payments(request):
-    if request.user.is_superuser or request.user.is_staff:
-        payments = Payments.objects.filter(room__boardinghouse__owner=request.user)
+    tenant = None
+    payments = Payments.objects.none()
+    if request.user.is_staff:
+        payments = Payments.objects.filter(room__boardinghouse__owner=request.user).order_by('-date')
     else:
         try:
-            tenant = Tenant.objects.get(name__id=request.user.id)
-            payments = Payments.objects.filter(tenant=tenant)
-        except Exception as e:
-            tenant = None
-            payments = None
+            tenant = Tenant.objects.get(name=request.user)
+            payments = Payments.objects.filter(tenant=tenant).order_by('-date')
+        except Tenant.DoesNotExist:
             messages.warning(request, "Please connect your account to a Tenant profile to view payments.")
-    form_tenant = Tenant.objects.filter(owner=request.user, is_archive=False)
-    form_room = Room.objects.filter(owner=request.user, is_archive=False)
+    
+    # Clear notifications for payments
+    if payments.exists():
+        payments.update(is_viewed=True)
+    
+    form_tenant = Tenant.objects.filter(owner=request.user, is_archive=False) if request.user.is_staff else None
+    form_room = Room.objects.filter(boardinghouse__owner=request.user, is_archive=False) if request.user.is_staff else None
 
     if request.method == "POST":
         if "button" in request.POST:
             if request.POST.get("button") == 'add_payment':
-
                 form = PaymentsForm(request.POST)
                 if form.is_valid():
                     form = form.save(commit=False)
                     form.tenant = Tenant.objects.get(id=request.POST.get('tenant'))
-                    form.room = Tenant.objects.get(id=request.POST.get('tenant')).room
+                    form.room = form.tenant.room
                     form.save()
                     messages.success(request, 'Payment added successfully')
                     return redirect('payments')
@@ -118,17 +125,112 @@ def payments(request):
     else:
         form = PaymentsForm()
 
-
     return render(request, 'payments/payments.html',{
         'payments': payments,
-        'tenant': tenant if not (request.user.is_superuser or request.user.is_staff) else None,
+        'tenant': tenant,
         'form': form,
         'feedback': Feedback.objects.filter(is_viewed=False, feedback_to=request.user).count(),
         'notice': Notice.objects.filter(is_viewed=False).count(),
         'form_tenant': form_tenant,
         'form_room': form_room,
-
     })
+
+@user_passes_test(lambda u: not u.is_superuser)
+def online_payment(request):
+    if request.method == "POST":
+        try:
+            # Safer fetch
+            tenant = Tenant.objects.filter(name=request.user).first()
+            if not tenant:
+                messages.error(request, 'No linked tenant profile found.')
+                return redirect('payments')
+            
+            if not tenant.room:
+                messages.error(request, 'You cannot transact until a room is assigned to you.')
+                return redirect('payments')
+
+            amount = request.POST.get('amount')
+            mode = request.POST.get('payment_method', 'GCash')
+            action_type = request.POST.get('action_type', 'pay_rent')
+            
+            from decimal import Decimal
+            numeric_amount = Decimal(amount)
+            
+            if action_type == 'cash_out':
+                if tenant.wallet_balance < numeric_amount:
+                    messages.error(request, 'Insufficient wallet balance to cash out.')
+                    return redirect('payments')
+                amount = str(-numeric_amount)
+                note = "Cash Out"
+                tenant.wallet_balance -= numeric_amount
+                tenant.save()
+            elif action_type == 'cash_in':
+                note = "Cash In"
+                tenant.wallet_balance += numeric_amount
+                tenant.save()
+            else:
+                if tenant.wallet_balance < numeric_amount:
+                    messages.error(request, 'Insufficient wallet balance. Please Cash In first.')
+                    return redirect('payments')
+                note = f"Payment via {mode}"
+                tenant.wallet_balance -= numeric_amount
+                tenant.save()
+            
+            # Record the payment
+            payment_obj = Payments.objects.create(
+                room=tenant.room,
+                tenant=tenant,
+                amount=amount,
+                mode=mode,
+                note=note
+            )
+            
+            # Email Notification Logic
+            try:
+                from django.core.mail import send_mail
+                from django.conf import settings
+                
+                subject = f"Transaction Alert: ₱{abs(float(amount)):.2f} via {mode}"
+                message = f"""Hello {tenant.name.get_full_name()}!
+
+We successfully processed your transaction.
+
+Transaction Details:
+- Action: {note}
+- Amount: ₱{abs(float(amount)):.2f}
+- Method: {mode}
+- Date: {payment_obj.date.strftime('%B %d, %Y %I:%M %p')}
+
+This transaction has been forwarded and recorded to your boarding house owner.
+
+Thank you!
+Boarding House Management System"""
+                
+                recipient_list = []
+                if tenant.name.email:
+                    recipient_list.append(tenant.name.email)
+                if getattr(tenant, 'owner', None) and tenant.owner.email:
+                    recipient_list.append(tenant.owner.email)
+                    
+                if recipient_list:
+                    send_mail(
+                        subject,
+                        message,
+                        settings.DEFAULT_FROM_EMAIL,
+                        recipient_list,
+                        fail_silently=True
+                    )
+            except Exception as e:
+                print(f"Failed to send email notification: {e}")
+            
+            messages.success(request, f'Success! {note} of ₱{abs(float(amount)):.2f} processed.')
+            return redirect('payments')
+        except Exception as e:
+            messages.error(request, f'Processing error: {str(e)}')
+            return redirect('payments')
+    return redirect('payments')
+
+
 
 @user_passes_test(lambda u: not u.is_superuser)
 def payments_info(request, id):
@@ -158,69 +260,63 @@ def payments_info(request, id):
 
 @user_passes_test(lambda u: u.is_staff)
 def income(request):
-
-
-    """
-    [
-        {
-            month: 'January',
-            income: 10000,
-        },
-        {
-            month: 'February',
-            income: 10000,
-        }
-
-    ]
-    """
-    # create a list of dictionaries of names of the months and income
-    # get all the months of payments
     if request.user.is_superuser:
-        payments = Payments.objects.all()
-        transient_payments = TransientPayment.objects.all()
+        payments = Payments.objects.all().order_by('-date')
+        transient_payments = TransientPayment.objects.all().order_by('-date')
     else:
-        payments = Payments.objects.filter(room__boardinghouse__owner=request.user)
-        transient_payments = TransientPayment.objects.filter(room__boardinghouse__owner=request.user)
+        payments = Payments.objects.filter(room__boardinghouse__owner=request.user).order_by('-date')
+        transient_payments = TransientPayment.objects.filter(room__boardinghouse__owner=request.user).order_by('-date')
+    
     months = []
-    for payment in payments:
-        total_amount = 0
-        tempdict = {}
-        if not any(payment.date.strftime('%B') in d['month'] for d in months):
+    # Combine all payments for a detailed master list
+    all_transactions = []
+    total_income = 0
 
-            tempdict["month"] = payment.date.strftime('%B')
-            months.append(tempdict)
-        else:
-            pass
+    for p in payments:
+        all_transactions.append({
+            'date': p.date,
+            'type': 'Tenant Payment',
+            'room': p.room.name,
+            'bhouse': p.room.boardinghouse.name,
+            'payer': p.tenant.name.get_full_name(),
+            'amount': float(p.amount),
+            'mode': p.mode or 'N/A'
+        })
+        total_income += float(p.amount)
 
-    # get the total amount of payments per month
-    for month in months:
-        total_amount = 0
-        for payment in payments:
-            if month["month"] == payment.date.strftime('%B'):
-                total_amount += float(payment.amount)
-        month["income"] = total_amount
+    for tp in transient_payments:
+        all_transactions.append({
+            'date': tp.date,
+            'type': 'Transient',
+            'room': tp.room.name,
+            'bhouse': tp.room.boardinghouse.name,
+            'payer': tp.transient,
+            'amount': float(tp.amount),
+            'mode': tp.mode or 'N/A'
+        })
+        total_income += float(tp.amount)
 
-    # get the total amount of transient payments per month
-    for month in months:
-        total_amount = 0
-        for transient_payment in transient_payments:
-            if month["month"] == transient_payment.date.strftime('%B'):
-                total_amount += float(transient_payment.amount)
-        month["income"] += total_amount
+    # Sort combined transactions by the full datetime
+    all_transactions.sort(key=lambda x: x['date'], reverse=True)
 
+    # Re-calculate monthly summary
+    monthly_data = {}
+    for trans in all_transactions:
+        month_name = trans['date'].strftime('%B')
+        if month_name not in monthly_data:
+            monthly_data[month_name] = 0
+        monthly_data[month_name] += trans['amount']
 
+    months_list = [{'month': m, 'income': i} for m, i in monthly_data.items()]
 
-
-
-
-
-
-    return render(request, 'payments/income.html',{
-        # 'income_list': income_list,
-        'months': months,
+    return render(request, 'payments/income.html', {
+        'months': months_list,
+        'all_transactions': all_transactions,
+        'total_income': total_income,
         'feedback': Feedback.objects.filter(is_viewed=False, feedback_to=request.user).count(),
-
+        'notice_count': Notice.objects.filter(is_viewed=False).count(),
     })
+
 
 @user_passes_test(lambda u: u.is_staff)
 def collectibles(request):
@@ -257,6 +353,9 @@ def collectibles(request):
         tenants = Tenant.objects.filter(room__isnull=False)
     else:
         tenants = Tenant.objects.filter(room__boardinghouse__owner=request.user, room__isnull=False)
+
+    # Clear notifications for collectibles (Tenant unviewed status)
+    tenants.update(is_viewed=True)
 
     collectibles_lists = []
 
@@ -328,6 +427,10 @@ def transient(request):
             payments = None
     form_tenant = Tenant.objects.filter(owner=request.user, is_archive=False)
     form_room = Room.objects.filter(owner=request.user, is_archive=False)
+
+    # Clear notifications for transient payments
+    if payments and payments.exists():
+        payments.update(is_viewed=True)
 
     if request.method == "POST":
         if "button" in request.POST:

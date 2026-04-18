@@ -18,6 +18,7 @@ urlpatterns = [
     path('homepage/', views.homepage, name='homepage'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('dashboard/owner/', views.dashboard_owner, name='dashboard_owner'),
+    path('dashboard/staff/', views.dashboard_staff, name='dashboard_staff'),
     path('dashboard/tenant/', views.dashboard_tenant, name='dashboard_tenant'),
     path('users/', views.users, name='users'),
     path('users/archive/', views.users_archive, name='users_archive'),
@@ -31,5 +32,8 @@ urlpatterns = [
     path('complaints/', views.complaints, name='complaints'),
     path('complaints/<int:id>/', views.complaint_detail, name='complaint_detail'),
     path('complaints/archive/', views.complaints_archive, name='complaints_archive'),
+    path('complaints/update-status/<int:complaint_id>/', views.update_complaint_status, name='update_complaint_status'),
+    path('inquiries/', views.inquiries, name='inquiries'),
+    path('inquiries/archive/', views.inquiries_archive, name='inquiries_archive'),
 
 ]
