@@ -29,7 +29,7 @@ class Payments(models.Model):
         return self.amount
 
     def save(self, *args, **kwargs):
-        is_wallet_tx = self.note in ["Cash In", "Cash Out"]
+        is_wallet_tx = any(kw in (self.note or "") for kw in ["Cash In", "Cash Out"])
         if self.pk:
             # If editing existing payment, calculate the difference
             old_payment = Payments.objects.get(pk=self.pk)
@@ -47,7 +47,7 @@ class Payments(models.Model):
         super(Payments, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        is_wallet_tx = self.note in ["Cash In", "Cash Out"]
+        is_wallet_tx = any(kw in (self.note or "") for kw in ["Cash In", "Cash Out"])
         # Subtract amount from tenant's total when a payment is deleted
         if not is_wallet_tx:
             self.tenant.amount_paid = float(self.tenant.amount_paid) - float(self.amount)

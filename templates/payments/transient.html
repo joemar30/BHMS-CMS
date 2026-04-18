@@ -85,8 +85,6 @@
                                 <td>{{ payment.note }}</td>
 
                                 <td class="text-right">
-                                    <a type="button" class="btn btn-sm btn-primary"
-                                       href="{% url 'transient-info' payment.id %}"><i class="fa fa-eye"></i></a>
                                     {% if request.user.is_superuser or request.user.is_staff %}
                                         <a class="btn btn-sm btn-danger delete" href="#" data-bs-toggle="modal"
                                            data-bs-target="#deletePayment"><i

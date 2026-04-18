@@ -541,9 +541,30 @@
         chatArea.scrollTop = chatArea.scrollHeight;
     });
 
-    // Initialize the view based on default active item
+    // Initialize the view based on default active item or URL parameters
     $(document).ready(function() {
-        $('.chat-item.active').click();
+        const urlParams = new URLSearchParams(window.location.search);
+        const toParam = urlParams.get('to');
+        const userIdParam = urlParams.get('user_id');
+
+        if (toParam) {
+            // Select by recipient (Tenant View)
+            const item = $(`.chat-item[data-recipient="${toParam}"]`);
+            if (item.length) {
+                $('.chat-item').removeClass('active');
+                item.addClass('active').click();
+            }
+        } else if (userIdParam) {
+            // Select by user ID (Owner/Admin View)
+            const item = $(`.chat-item[data-user-id="${userIdParam}"]`);
+            if (item.length) {
+                $('.chat-item').removeClass('active');
+                item.addClass('active').click();
+            }
+        } else {
+            // Default first item
+            $('.chat-item.active').click();
+        }
     });
 
     function submitInlineReply() {

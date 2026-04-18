@@ -11,4 +11,7 @@ urlpatterns = [
     path('income/', views.income, name='income'),
     path('collectibles/', views.collectibles, name='collectibles'),
     path('online-payment/', views.online_payment, name='online-payment'),
+    path('payments/stripe/create-checkout-session/', views.create_stripe_checkout_session, name='stripe-create-checkout-session'),
+    path('payments/stripe/success/', views.stripe_success, name='stripe-success'),
+    path('payments/stripe/cancel/', views.stripe_cancel, name='stripe-cancel'),
     ]

@@ -197,7 +197,20 @@
                     <input type="hidden" name="inquiry_id" id="modalInquiryId">
                     
                     <div class="form-group mb-4">
-                        <label class="small fw-bold text-muted mb-1 d-block">REPLY / NOTES</label>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="small fw-bold text-muted mb-0">REPLY / NOTES</label>
+                            <div class="dropdown">
+                                <button class="btn btn-link btn-sm text-primary p-0 text-decoration-none dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-magic me-1"></i>Quick Reply
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="border-radius: 10px;">
+                                    <li><button class="dropdown-item small" type="button" onclick="setQuickReply('Hi! Thanks for inquiring. Are you available for a viewing this week?')">Viewing Invite</button></li>
+                                    <li><button class="dropdown-item small" type="button" onclick="setQuickReply('Yes, we have rooms available. Please provide your preferred move-in date.')">Room Available</button></li>
+                                    <li><button class="dropdown-item small" type="button" onclick="setQuickReply('Sorry, we are currently fully occupied. Would you like to be on the waiting list?')">Fully Occupied</button></li>
+                                    <li><button class="dropdown-item small" type="button" onclick="setQuickReply('Just following up if you are still interested in the room. Thank you!')">Follow Up</button></li>
+                                </ul>
+                            </div>
+                        </div>
                         <textarea name="reply" id="modalReply" class="form-control border-0 bg-light p-3" rows="3" style="border-radius: 10px;" placeholder="Type your response or internal notes here..."></textarea>
                     </div>
 
@@ -229,6 +242,11 @@
 {% block js %}
 <script>
     document.getElementById("nav-inquiries").classList.add("active");
+
+    function setQuickReply(text) {
+        document.getElementById('modalReply').value = text;
+    }
+
     const inquiryModal = document.getElementById('inquiryModal');
     if (inquiryModal) {
         inquiryModal.addEventListener('show.bs.modal', function (event) {

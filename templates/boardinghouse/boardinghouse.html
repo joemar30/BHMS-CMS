@@ -1,7 +1,7 @@
 {% extends 'base/base.html' %}
 
 {% block page-title %}
-    Boarding Houses
+    Popular Boarding Houses
 {% endblock %}
 
 {% block style %}
@@ -108,8 +108,10 @@
                                 <th>ID</th>
                                 <th>Name</th>
                                 <th>Address</th>
+                                <th>Rooms</th>
                                 <th>Beds</th>
                                 <th>Baths</th>
+                                <th>Wifi</th>
                                 <th>Preview</th>
                                 {% if request.user.is_superuser %}
                                     <th>Owner</th>
@@ -124,10 +126,20 @@
                                     <td>{{ boardinghouse.name }}</td>
                                     <td>{{ boardinghouse.address }}</td>
                                     <td>
+                                        <span class="badge bg-light text-primary"><i class="fas fa-door-open me-1"></i> {{ boardinghouse.room_count }}</span>
+                                    </td>
+                                    <td>
                                         <span class="badge bg-light text-dark"><i class="fas fa-bed me-1"></i> {{ boardinghouse.num_beds }}</span>
                                     </td>
                                     <td>
                                         <span class="badge bg-light text-dark"><i class="fas fa-bath me-1"></i> {{ boardinghouse.num_baths }}</span>
+                                    </td>
+                                    <td>
+                                        {% if boardinghouse.has_wifi %}
+                                            <span class="badge bg-success shadow-sm" title="Wifi Available"><i class="fas fa-wifi"></i> ON</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary shadow-sm" title="No Wifi"><i class="fas fa-wifi"></i> OFF</span>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         <div class="rounded-pill shadow-sm overflow-hidden" style="width: 48px; height: 48px;">
@@ -137,13 +149,17 @@
                                     {% if request.user.is_superuser %}
                                         <td>{{ boardinghouse.owner.get_full_name }}</td>
                                     {% endif %}
-                                    <td class="text-right">
-                                        <a class="btn btn-sm btn-outline-primary me-1"
-                                           href="{% url 'boardinghouse_detail' boardinghouse.id %}"><i
-                                                class="fa fa-eye"></i></a>
-                                        <a class="btn btn-sm btn-outline-danger delete" href="" data-bs-toggle="modal"
-                                           data-bs-target="#delete"><i
-                                                class="fa fa-trash-alt"></i></a>
+                                    <td class="text-right pe-4">
+                                        <div class="action-group shadow-sm">
+                                            <a class="btn btn-sm btn-outline-primary"
+                                               href="{% url 'boardinghouse_detail' boardinghouse.id %}" title="View Details">
+                                                <i class="fa fa-eye"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-outline-danger delete" 
+                                                    data-bs-toggle="modal" data-bs-target="#delete" title="Move to Archive">
+                                                <i class="fa fa-trash-alt"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -206,11 +222,33 @@
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-12">
-                                <label for="id_name">More Images: </label>
-                                <input type="file" name="more_image" class="form-control" accept="image/*" id="more_image" multiple>
+                                <div class="col-12">
+                                    <label for="id_name">More Images: </label>
+                                    <input type="file" name="more_image" class="form-control" accept="image/*" id="more_image" multiple>
+                                </div>
                             </div>
-                        </div>
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <div class="card bg-light border-0 rounded-3 mb-0">
+                                        <div class="card-body py-2 px-3">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="rounded-circle bg-white shadow-sm p-2 me-3">
+                                                        <i class="fas fa-wifi text-primary"></i>
+                                                    </div>
+                                                    <div>
+                                                        <label class="fw-bold mb-0 d-block">Wifi Availability</label>
+                                                        <small class="text-muted">Turn on if this house has internet</small>
+                                                    </div>
+                                                </div>
+                                                <div class="form-check form-switch m-0">
+                                                    {{ form.has_wifi }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         <div class="mb-3 form-group">
                             <h5>Boarding House Location</h5>
                             <span>Click on the map to select the coordinates of your Boarding House </span>

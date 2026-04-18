@@ -188,6 +188,64 @@
             vertical-align: middle !important;
         }
 
+        /* Fused Pill Action Group */
+        .action-group {
+            display: inline-flex;
+            border-radius: 50px;
+            overflow: hidden;
+            border: 1.5px solid #e2e8f0;
+            background: #fff;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .action-group:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .action-group .btn {
+            border-radius: 0 !important;
+            border: none !important;
+            padding: 0.5rem 0.9rem !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            background: transparent !important;
+            color: var(--text-secondary);
+        }
+
+        .action-group .btn:hover {
+            background-color: #f1f5f9 !important;
+            color: var(--primary);
+        }
+
+        .action-group .btn-outline-danger:hover {
+            color: #ef4444 !important;
+            background-color: #fef2f2 !important;
+        }
+
+        .action-group .btn-outline-success:hover {
+            color: #10b981 !important;
+            background-color: #ecfdf5 !important;
+        }
+
+        .action-group .btn:not(:last-child) {
+            border-right: 1.5px solid #e2e8f0 !important;
+        }
+
+        .action-group form {
+            display: contents;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .action-group .btn {
+                padding: 0.4rem 0.7rem !important;
+            }
+        }
+
 
 
 

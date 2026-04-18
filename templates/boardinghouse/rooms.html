@@ -90,12 +90,16 @@
                                 {% if request.user.is_superuser %}
                                     <td>{{ room.boardinghouse.owner.get_full_name }}</td>
                                 {% endif %}
-                                <td class="text-right">
-                                    <a class="btn btn-sm btn-success" href="{% url 'room_detail' room.id %}"><i
-                                            class="fa fa-eye"></i></a>
-                                    <a class="btn btn-sm btn-danger delete" href="#" data-bs-toggle="modal"
-                                       data-bs-target="#delete"><i
-                                            class="fa fa-trash-alt"></i></a>
+                                <td class="text-right pe-4">
+                                    <div class="action-group shadow-sm">
+                                        <a class="btn btn-sm btn-outline-primary" href="{% url 'room_detail' room.id %}" title="View Details">
+                                            <i class="fa fa-eye"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger delete" 
+                                                data-bs-toggle="modal" data-bs-target="#delete" title="Move to Archive">
+                                            <i class="fa fa-trash-alt"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
 

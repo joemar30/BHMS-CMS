@@ -16,12 +16,17 @@ class BoardingHouse(models.Model):
     latitude = models.DecimalField(max_digits=25, decimal_places=20)
     longitude = models.DecimalField(max_digits=25, decimal_places=20)
     image = models.ImageField(upload_to='boardinghouse', blank=True)
+    has_wifi = models.BooleanField(default=False)
     owner = models.ForeignKey('auth.User', related_name='boardinghouses', on_delete=models.CASCADE)
     is_archive = models.BooleanField(default=False)
     is_viewed = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
+
+    @property
+    def room_count(self):
+        return self.rooms.filter(is_archive=False).count()
 
 class BoardingHouseImage(models.Model):
     boardinghouse = models.ForeignKey(BoardingHouse, related_name='images', on_delete=models.CASCADE)

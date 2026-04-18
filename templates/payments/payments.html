@@ -5,40 +5,207 @@
 {% endblock %}
 
 {% block style %}
+    <style>
+        .gcash-receipt-card {
+            background: transparent;
+            width: 100%;
+            max-width: 400px;
+            margin: auto;
+            position: relative;
+            font-family: 'Inter', sans-serif;
+        }
 
+        .receipt-body {
+            background: white;
+            border-radius: 20px 20px 0 0;
+            padding: 40px 30px 20px 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .receipt-check {
+            width: 70px;
+            height: 70px;
+            background: #007DFF;
+            border: 5px solid white;
+            border-radius: 50%;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            position: absolute;
+            top: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .receipt-sent-via {
+            color: #888;
+            font-size: 0.9rem;
+            margin-top: 20px;
+            margin-bottom: 25px;
+        }
+
+        .receipt-divider {
+            border-top: 1px solid #eee;
+            margin: 15px 0;
+        }
+
+        .receipt-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+        }
+
+        .receipt-label {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .receipt-value {
+            color: #333;
+            font-weight: 700;
+        }
+
+        .receipt-total-label {
+            color: #003061;
+            font-weight: 800;
+            font-size: 1.1rem;
+        }
+
+        .receipt-total-value {
+            color: #003061;
+            font-weight: 900;
+            font-size: 1.8rem;
+        }
+
+        .receipt-footer-grey {
+            background: #f8faff;
+            padding: 20px 30px;
+            text-align: center;
+        }
+
+        .receipt-ref {
+            color: #4a5568;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .receipt-date {
+            color: #718096;
+            font-size: 0.8rem;
+        }
+
+        .receipt-sawtooth {
+            height: 15px;
+            background: #f8faff;
+            width: 100%;
+            mask-image: linear-gradient(to right, black 100%, transparent 100%);
+            -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='15' viewBox='0 0 20 15'%3E%3Cpolygon points='0,0 10,15 20,0 20,15 0,15' fill='black'/%3E%3C/svg%3E");
+            mask-repeat: repeat-x;
+            -webkit-mask-repeat: repeat-x;
+        }
+    </style>
 {% endblock %}
 
 {% block js %}
     <script>
-        // add active class to nav-dashboard
-        document.getElementById("payments").className += " active";
+        document.getElementById("nav-payments").className += " active";
+        
+        $(document).ready(function() {
+            var hasReceipt = "{{ receipt_data|yesno:'true,false' }}";
+            if (hasReceipt === "true") {
+                var receiptModal = new bootstrap.Modal(document.getElementById('receiptModal'));
+                receiptModal.show();
+            }
+        });
     </script>
     <script>
-        // when delete button in action clicked, get the username of user
         $(document).on('click', '.delete', function () {
             var id = $(this).closest('tr').find('td:nth-child(1)').text();
             $('#id_delete').val(id);
         });
+
+        function setPaymentMethod(method) {
+            const form = document.getElementById('transactForm');
+            const hiddenMethod = document.getElementById('txn_payment_method');
+            const securityNote = document.getElementById('securityNote');
+            const gcashBtn = document.getElementById('methodGCash');
+            const stripeBtn = document.getElementById('methodStripe');
+            const submitBtn = document.getElementById('submitBtn');
+            const icon = document.getElementById('transactModalIcon');
+            
+            hiddenMethod.value = method;
+            
+            if(method === 'Stripe') {
+                form.action = "{% url 'stripe-create-checkout-session' %}";
+                securityNote.innerHTML = '<i class="fas fa-lock me-1"></i> Your transaction is secured by Stripe.';
+                gcashBtn.className = 'btn btn-light rounded-pill flex-fill fw-bold';
+                stripeBtn.className = 'btn btn-info rounded-pill flex-fill fw-bold text-white';
+                submitBtn.style.background = '#6772e5';
+                icon.className = 'fas fa-credit-card mb-2';
+                icon.style.color = '#6772e5';
+            } else {
+                form.action = "{% url 'online-payment' %}";
+                securityNote.innerHTML = '<i class="fas fa-lock me-1"></i> Your transaction is secured by GCash.';
+                gcashBtn.className = 'btn btn-primary rounded-pill flex-fill fw-bold';
+                stripeBtn.className = 'btn btn-light rounded-pill flex-fill fw-bold';
+                submitBtn.style.background = '#005bbf';
+                icon.className = 'fas fa-mobile-alt mb-2';
+                icon.style.color = '#005bbf';
+            }
+        }
+
+        function setTransactionType(type) {
+            const btnType = document.getElementById('txn_action_type');
+            const title = document.getElementById('transactModalTitle');
+            const heading = document.getElementById('transactModalHeading');
+            const desc = document.getElementById('transactModalDesc');
+            const amtBox = document.getElementById('txn_amount');
+            const categorySection = document.getElementById('billCategorySection');
+            
+            btnType.value = type;
+            
+            if(type === 'cash_in') {
+                title.innerHTML = '<i class="fas fa-plus-circle me-2"></i> Cash In';
+                heading.innerText = "Load Wallet";
+                desc.innerText = "Choose method to add funds to your wallet.";
+                amtBox.value = "";
+                if(categorySection) categorySection.style.display = 'none';
+            } else if(type === 'cash_out') {
+                title.innerHTML = '<i class="fas fa-arrow-circle-down me-2"></i> Cash Out';
+                heading.innerText = "Withdraw Funds";
+                desc.innerText = "Withdraw from your available wallet balance.";
+                amtBox.value = "";
+                if(categorySection) categorySection.style.display = 'none';
+                setPaymentMethod('GCash');
+                document.getElementById('methodStripe').style.display = 'none';
+            } else {
+                title.innerHTML = '<i class="fas fa-paper-plane me-2"></i> Pay Rent / Bills';
+                heading.innerText = "Pay Rent / Bills";
+                desc.innerText = "Securely pay your outstanding rent or utility balance.";
+                if(categorySection) categorySection.style.display = 'block';
+                var rentDue = parseFloat("{{ tenant.current_balance|default:'0' }}") || 0;
+                amtBox.value = rentDue > 0 ? rentDue : "";
+                document.getElementById('methodStripe').style.display = 'block';
+            }
+        }
     </script>
 {% endblock %}
 
-
-
-
-{% block modal %}
-{% endblock %}
-
-
-
-
 {% block content %}
-
     <section class="content">
         <div class="container-fluid">
             {% if messages %}
                 {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }} border-0 shadow-sm" role="alert">
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show border-0 shadow-sm rounded-4" role="alert">
+                        <i class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %} me-2"></i>
                         {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 {% endfor %}
             {% endif %}
@@ -100,7 +267,8 @@
                                 <th>Tenant</th>
                                 <th>Room</th>
                                 <th>Amount</th>
-                                <th>Note</th>
+                                <th>Category</th>
+                                <th>Method</th>
                                 <th class="text-right">Actions</th>
                             </tr>
                             </thead>
@@ -112,12 +280,51 @@
                                     <td class="fw-bold">{{ payment.tenant.name.get_full_name }}</td>
                                     <td><span class="badge bg-light text-secondary">{{ payment.room }}</span></td>
                                     <td><span class="text-success fw-bold">₱{{ payment.amount|floatformat:2 }}</span></td>
-                                    <td><span class="text-muted small">{{ payment.note|default:"-" }}</span></td>
+                                    <td>
+                                        {% if payment.note == "Cash In" %}
+                                            <span class="badge rounded-pill bg-success-subtle text-success border border-success px-3">
+                                                <i class="fas fa-plus-circle me-1"></i> Cash In
+                                            </span>
+                                        {% elif payment.note == "Cash Out" %}
+                                            <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger px-3">
+                                                <i class="fas fa-minus-circle me-1"></i> Cash Out
+                                            </span>
+                                        {% elif payment.note == "Rent" %}
+                                            <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary px-3">
+                                                <i class="fas fa-home me-1"></i> Rent
+                                            </span>
+                                        {% elif payment.note == "Electricity" %}
+                                            <span class="badge rounded-pill bg-warning-subtle text-warning border border-warning px-3">
+                                                <i class="fas fa-bolt me-1"></i> Electricity
+                                            </span>
+                                        {% elif payment.note == "Water" %}
+                                            <span class="badge rounded-pill bg-info-subtle text-info border border-info px-3">
+                                                <i class="fas fa-tint me-1"></i> Water
+                                            </span>
+                                        {% elif payment.note == "Internet" %}
+                                            <span class="badge rounded-pill bg-dark-subtle text-dark border border-dark px-3">
+                                                <i class="fas fa-wifi me-1"></i> Internet
+                                            </span>
+                                        {% else %}
+                                            <span class="badge rounded-pill bg-light text-secondary border px-3">
+                                                {{ payment.note|default:"-" }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if payment.mode == "GCash" %}
+                                            <span class="badge bg-primary rounded-pill px-2" style="background-color: #007DFF !important;">
+                                                <i class="fas fa-mobile-alt me-1"></i> GCash
+                                            </span>
+                                        {% elif payment.mode == "Stripe" %}
+                                            <span class="badge bg-purple rounded-pill px-2" style="background-color: #6772e5 !important; color: white;">
+                                                <i class="fas fa-credit-card me-1"></i> Stripe
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary rounded-pill px-2">{{ payment.mode }}</span>
+                                        {% endif %}
+                                    </td>
                                     <td class="text-right">
-                                        <a class="btn btn-sm btn-outline-primary me-1"
-                                           href="{% url 'payments-info' payment.id %}">
-                                            <i class="fa fa-eye"></i>
-                                        </a>
                                         {% if request.user.is_superuser or request.user.is_staff %}
                                             <button type="button" class="btn btn-sm btn-outline-danger delete"
                                                     data-bs-toggle="modal"
@@ -136,21 +343,70 @@
             </div>
         </div>
     </section>
+{% endblock %}
 
-    <!-- Modal Add Payment (Admin) -->
-    <div class="modal fade" id="addPayment" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+{% block modal %}
+    {% if receipt_data %}
+    <!-- GCash Receipt Modal -->
+    <div class="modal fade" id="receiptModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 bg-transparent">
+                <div class="modal-body p-0">
+                    <div class="gcash-receipt-card shadow-lg">
+                        <div class="receipt-body">
+                            <div class="receipt-check">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div class="receipt-sent-via">Sent via {{ receipt_data.mode|default:"GCash" }}</div>
+                            
+                            <div class="receipt-divider"></div>
+                            <div class="receipt-row">
+                                <span class="receipt-label">Paying to</span>
+                                <span class="receipt-value">{{ receipt_data.house_name }}</span>
+                            </div>
+                            <div class="receipt-row">
+                                <span class="receipt-label">Paid For</span>
+                                <span class="receipt-value text-capitalize">{{ receipt_data.category|default:"Rent" }}</span>
+                            </div>
+                            <div class="receipt-row">
+                                <span class="receipt-label">Amount</span>
+                                <span class="receipt-value">{{ receipt_data.amount }}</span>
+                            </div>
+                            <div class="receipt-divider"></div>
+                            
+                            <div class="receipt-row mt-3">
+                                <span class="receipt-total-label">Total Amount Sent</span>
+                                <span class="receipt-total-value">₱{{ receipt_data.amount }}</span>
+                            </div>
+                        </div>
+                        <div class="receipt-footer-grey">
+                            <div class="receipt-ref">Ref No. {{ receipt_data.ref_no }}</div>
+                            <div class="receipt-date">{{ receipt_data.date }}</div>
+                        </div>
+                        <div class="receipt-sawtooth"></div>
+                    </div>
+                    <div class="text-center mt-4">
+                        <button type="button" class="btn btn-light rounded-pill px-5 fw-bold" data-bs-dismiss="modal">DONE</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="modal fade" id="addPayment" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h1 class="modal-title fs-5" id="exampleModalLabel">Add Payments</h1>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h1 class="modal-title fs-5">Add Payments</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form method="post" enctype="multipart/form-data">
+                <form method="post">
                     {% csrf_token %}
                     <div class="modal-body">
-                        <label for="id_tenant" class="form-label">Tenant</label>
-                        <select name="tenant" class="form-control" required="" id="id_tenant">
-                            <option value="" selected="">---------</option>
+                        <label class="form-label">Tenant</label>
+                        <select name="tenant" class="form-control" required="">
+                            <option value="">---------</option>
                             {% for t in form_tenant %}
                             	<option value="{{ t.id }}">{{ t.name.get_full_name }}</option>
                             {% endfor %}
@@ -170,86 +426,64 @@
     <div class="modal fade" id="transactModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg rounded-4">
-                <div class="modal-header text-white border-0" id="transactModalHeader" style="background: linear-gradient(135deg, #005bbf 0%, #0076f8 100%);">
+                <div class="modal-header text-white border-0" style="background: linear-gradient(135deg, #005bbf 0%, #0076f8 100%);">
                     <h5 class="modal-title fw-bold" id="transactModalTitle"><i class="fas fa-shield-alt me-2"></i> Secure Transaction</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form action="{% url 'online-payment' %}" method="post">
+                <form id="transactForm" action="{% url 'online-payment' %}" method="post">
                     {% csrf_token %}
                     <input type="hidden" name="action_type" id="txn_action_type" value="pay_rent">
-                    <input type="hidden" name="payment_method" value="GCash">
                     <div class="modal-body p-4 text-center">
                         <div class="mb-4">
                             <i id="transactModalIcon" class="fas fa-mobile-alt mb-2" style="font-size: 3rem; color: #005bbf;"></i>
                             <h4 class="fw-bold text-dark mt-2" id="transactModalHeading">Transaction</h4>
-                            <p class="text-muted small" id="transactModalDesc">Enter the amount below.</p>
+                            <p class="text-muted small" id="transactModalDesc">Choose your payment method and enter amount.</p>
+                        </div>
+                        <div class="mb-4 box-shadow-sm rounded-pill p-1 bg-light d-flex" style="border: 1px solid #e0e0e0;">
+                            <button type="button" id="methodGCash" class="btn btn-primary rounded-pill flex-fill fw-bold" onclick="setPaymentMethod('GCash')">GCash</button>
+                            <button type="button" id="methodStripe" class="btn btn-light rounded-pill flex-fill fw-bold" onclick="setPaymentMethod('Stripe')">Card / Stripe</button>
+                            <input type="hidden" name="payment_method" id="txn_payment_method" value="GCash">
                         </div>
 
-                        <div class="mb-4 px-3">
+                        <!-- Bill Category Section (Only for Pay Rent) -->
+                        <div id="billCategorySection" class="mb-4 text-start" style="display: none;">
+                            <label class="form-label fw-bold small text-muted mb-2 ps-2">SELECT BILL TYPE</label>
+                            <select name="bill_category" id="txn_bill_category" class="form-select border-0 shadow-sm rounded-pill py-3 px-4 bg-light fw-bold" style="border: 2px solid #e0e0e0 !important;">
+                                <option value="Rent">Rent</option>
+                                <option value="Electricity">Electricity</option>
+                                <option value="Water">Water</option>
+                                <option value="Internet">Internet</option>
+                                <option value="Cable">Cable / TV</option>
+                                <option value="Others">Others</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-4 px-3 text-start">
+                            <label class="form-label fw-bold small text-muted mb-2 ps-2">AMOUNT TO PAY</label>
                             <div class="input-group input-group-lg shadow-sm rounded-pill overflow-hidden" style="border: 2px solid #e0e0e0;">
                                 <span class="input-group-text bg-white border-0 fw-bold fs-4 text-primary ps-4">₱</span>
-                                <input type="number" step="0.01" name="amount" id="txn_amount" class="form-control border-0 fw-bold fs-3 text-center" 
-                                       value="0.00" min="1" required style="outline: none !important; box-shadow: none !important;">
+                                <input type="number" step="0.01" name="amount" id="txn_amount" class="form-control border-0 fw-bold fs-3 text-center" required>
                                 <span class="input-group-text bg-white border-0 pe-4"></span>
                             </div>
                         </div>
-                        
-                        <div class="alert bg-light py-2 small border-0 text-muted rounded-pill">
-                            <i class="fas fa-lock me-1"></i> Your transaction is secured by GCash.
+                        <div class="alert bg-light py-2 small border-0 text-muted rounded-pill" id="securityNote">
+                            <i class="fas fa-lock me-1"></i> Your transaction is secured.
                         </div>
                     </div>
                     <div class="modal-footer border-0 p-4 pt-0">
-                        <button type="submit" class="btn w-100 py-3 fw-bold rounded-pill text-white" style="background: #005bbf; font-size: 1.1rem; box-shadow: 0 4px 10px rgba(0, 91, 191, 0.3);">
-                            PROCEED
-                        </button>
+                        <button type="submit" class="btn w-100 py-3 fw-bold rounded-pill text-white" id="submitBtn" style="background: #005bbf;">PROCEED</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <script>
-        function setTransactionType(type) {
-            const btnType = document.getElementById('txn_action_type');
-            const title = document.getElementById('transactModalTitle');
-            const icon = document.getElementById('transactModalIcon');
-            const heading = document.getElementById('transactModalHeading');
-            const desc = document.getElementById('transactModalDesc');
-            const amtBox = document.getElementById('txn_amount');
-            
-            btnType.value = type;
-            
-            if(type === 'cash_in') {
-                title.innerHTML = '<i class="fas fa-plus-circle me-2"></i> Cash In';
-                icon.className = 'fas fa-wallet mb-2';
-                heading.innerText = "Load Wallet";
-                desc.innerText = "Add funds to your GCash-style wallet.";
-                amtBox.value = "";
-            } else if(type === 'cash_out') {
-                title.innerHTML = '<i class="fas fa-arrow-circle-down me-2"></i> Cash Out';
-                icon.className = 'fas fa-hand-holding-usd mb-2';
-                heading.innerText = "Withdraw Funds";
-                desc.innerText = "Withdraw from your available wallet balance.";
-                amtBox.value = "";
-            } else {
-                title.innerHTML = '<i class="fas fa-paper-plane me-2"></i> Pay Rent';
-                icon.className = 'fas fa-home mb-2';
-                heading.innerText = "Pay via GCash";
-                desc.innerText = "Pay your outstanding rent balance automatically.";
-                const rentDue = parseFloat("{% if tenant.current_balance > 0 %}{{ tenant.current_balance|floatformat:2 }}{% else %}0.00{% endif %}");
-                amtBox.value = rentDue > 0 ? rentDue : "";
-            }
-        }
-    </script>
-
-
-    <div class="modal fade" id="deletePayment" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal fade" id="deletePayment" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <!-- ... same content ... -->
                 <div class="modal-header">
-                    <h1 class="modal-title fs-5" id="exampleModalLabel">Delete Payment</h1>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h1 class="modal-title fs-5">Delete Payment</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form method="post">
                     {% csrf_token %}
@@ -265,5 +499,4 @@
             </div>
         </div>
     </div>
-
 {% endblock %}

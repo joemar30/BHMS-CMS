@@ -16,10 +16,8 @@ from .models import BoardingHouse, Room, BoardingHouseImage
 
 @user_passes_test(lambda u: u.is_superuser or u.is_staff)
 def boardinghouse(request):
-    if request.user.is_superuser:
-        boardinghouses = BoardingHouse.objects.filter(is_archive=False)
-    else:
-        boardinghouses = BoardingHouse.objects.filter(owner=request.user, is_archive=False)
+    # Pull all existing boarding houses from the system to match global listings
+    boardinghouses = BoardingHouse.objects.filter(is_archive=False)
     
     boardinghouses.update(is_viewed=True)
 
@@ -176,9 +174,15 @@ def delete_image(request, id):
 def rooms(request):
     if request.user.is_superuser:
         rooms = Room.objects.filter(is_archive=False)
+        bhouses = BoardingHouse.objects.filter(is_archive=False)
+    elif hasattr(request.user, 'staff_profile'):
+        # Staff sees houses owned by their employer
+        rooms = Room.objects.filter(boardinghouse__owner=request.user.staff_profile.owner, is_archive=False)
+        bhouses = BoardingHouse.objects.filter(owner=request.user.staff_profile.owner, is_archive=False)
     else:
+        # Owner sees their own houses
         rooms = Room.objects.filter(boardinghouse__owner=request.user, is_archive=False)
-    bhouses = BoardingHouse.objects.filter(owner=request.user, is_archive=False)
+        bhouses = BoardingHouse.objects.filter(owner=request.user, is_archive=False)
     
     rooms.update(is_viewed=True)
     if request.method == "POST":

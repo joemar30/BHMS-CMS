@@ -162,3 +162,9 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
 DEFAULT_FROM_EMAIL = 'Pagadian Boarding House <joemarflores449@gmail.com>'
+
+# Stripe Settings
+STRIPE_PUBLIC_KEY = 'pk_test_51TNc5kFDNeBnJgQnUgt9CyNz49ipeTFelisrYOCq2vj4kkIvICshXOqH5NWk0eFzeEpnWrV6zCw43C3cPPZAluNI00SVMZjG4j'
+STRIPE_SECRET_KEY = 'sk_test_51TNc5kFDNeBnJgQnu6hgeeDTiDfJkaxAKrpIUa3KkKyYJGGEZYebh6TLPcRs46IXUPhnhX5UL0nOo7qojWFA0Pmo00xk3kwI96'
+STRIPE_SUCCESS_URL = 'http://127.0.0.1:8000/payments/stripe/success/'
+STRIPE_CANCEL_URL = 'http://127.0.0.1:8000/payments/stripe/cancel/'

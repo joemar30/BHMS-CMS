@@ -1,5 +1,10 @@
 import json
+import threading
+import base64
+from django.core.files.base import ContentFile
+from authentication.models import Profile
 from datetime import datetime, timedelta
+from django.utils import timezone as django_tz
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -56,8 +61,28 @@ def myaccount(request):
 
 
     if request.method == "POST":
-        form = UserForm(request.POST, instance=request.user)
+        form = UserForm(request.POST, request.FILES, instance=request.user)
         change_password_form = UserChangePassword(data=request.POST, user=request.user)
+        
+        # Profile Image Handling
+        profile, created = Profile.objects.get_or_create(user=request.user)
+        
+        # Uploaded file
+        if 'profile_image' in request.FILES:
+            profile.image = request.FILES['profile_image']
+            profile.save()
+            
+        # Webcam base64 data
+        webcam_data = request.POST.get('webcam_image')
+        if webcam_data and webcam_data.startswith('data:image'):
+            try:
+                format, imgstr = webcam_data.split(';base64,')
+                ext = format.split('/')[-1]
+                data = ContentFile(base64.b64decode(imgstr), name=f'webcam_{request.user.username}.{ext}')
+                profile.image = data
+                profile.save()
+            except Exception as e:
+                print(f"Webcam image save error: {e}")
         if request.POST.get("old_password") and request.POST.get("new_password1") and request.POST.get("new_password2"):
 
             if form.is_valid() and change_password_form.is_valid():
@@ -69,7 +94,6 @@ def myaccount(request):
                 return redirect('homepage')
             else:
                 errors = str(form.errors) + str(change_password_form.errors)
-                print(errors)
                 messages.error(request, 'Account Update Failed:' + errors)
                 return redirect('myaccount')
         else:
@@ -100,6 +124,12 @@ def dashboard(request):
         rooms = Room.objects.all()
         rooms_count = rooms.count()
         owner = User.objects.filter(is_superuser=False, is_staff=True).count()
+        income = 0
+        all_payments = Payments.objects.all()
+        for p in all_payments:
+            if p.note and any(kw in p.note for kw in ["Cash In", "Cash Out"]):
+                continue
+            income = float(income) + float(p.amount)
     else:
         return redirect('homepage')
 
@@ -109,6 +139,7 @@ def dashboard(request):
         'boardinghouses_count': boardinghouses_count,
         'rooms_count': rooms_count,
         'owner': owner,
+        'income': income,
         'feedback_notif': Feedback.objects.filter(is_viewed=False, feedback_to=request.user).count(),
         'complaint_notif': Complaint.objects.filter(complaint_to=request.user, is_resolved=False).count(),
         'notice': Notice.objects.filter(is_viewed=False).count(),
@@ -120,8 +151,10 @@ def dashboard_owner(request):
     if request.user.is_staff:
         income = 0
         payments = Payments.objects.filter(room__boardinghouse__owner=request.user)
-        for payment in payments:
-            income = float(income) + float(payment.amount)
+        for p in payments:
+            if p.note and any(kw in p.note for kw in ["Cash In", "Cash Out"]):
+                continue
+            income = float(income) + float(p.amount)
         # get all tenants in Tenant
         tenants = Tenant.objects.filter(room__boardinghouse__owner=request.user).count()
         # get all rooms in Room
@@ -206,9 +239,15 @@ def dashboard_owner(request):
         # Monthly Complaints for Owner
         monthly_complaints = []
         all_complaints = Complaint.objects.filter(complaint_to=request.user)
+        current_year = datetime.now().year
         for i in range(1, 13):
-            month_name = datetime(2021, i, 1).strftime("%B")
-            count = all_complaints.filter(date__month=i, date__year=datetime.now().year).count()
+            month_name = datetime(current_year, i, 1).strftime("%B")
+            start_date = django_tz.make_aware(datetime(current_year, i, 1))
+            if i == 12:
+                end_date = django_tz.make_aware(datetime(current_year + 1, 1, 1))
+            else:
+                end_date = django_tz.make_aware(datetime(current_year, i + 1, 1))
+            count = all_complaints.filter(date__gte=start_date, date__lt=end_date).count()
             monthly_complaints.append({
                 "month": month_name,
                 "count": count,
@@ -300,14 +339,22 @@ def dashboard_staff(request):
     total_count = all_complaints.count()
 
     # Monthly Revenue for the chart
+    # NOTE: Using date range filters instead of date__month/date__year
+    # because those use Django's custom SQLite functions which crash
+    # with USE_TZ=True + Asia/Manila timezone on Python 3.12
     monthly_income = []
     current_year = datetime.now().year
     for i in range(1, 13):
         month_name = datetime(current_year, i, 1).strftime("%B")
+        start_date = django_tz.make_aware(datetime(current_year, i, 1))
+        if i == 12:
+            end_date = django_tz.make_aware(datetime(current_year + 1, 1, 1))
+        else:
+            end_date = django_tz.make_aware(datetime(current_year, i + 1, 1))
         monthly_sum = Payments.objects.filter(
-            room__boardinghouse__owner=owner, 
-            date__month=i, 
-            date__year=current_year
+            room__boardinghouse__owner=owner,
+            date__gte=start_date,
+            date__lt=end_date
         ).aggregate(Sum('amount'))['amount__sum'] or 0
         monthly_income.append({
             "month": month_name,
@@ -347,12 +394,22 @@ def dashboard_tenant(request):
     else:
         return redirect('homepage')
     notices = []
-    if tenant and tenant.room:
-        notices = Notice.objects.filter(boardinghouse=tenant.room.boardinghouse, is_archived=False).order_by('-date')
+    if tenant:
+        # Determine the owner to show notices from
+        target_owner = None
+        if tenant.room and tenant.room.boardinghouse:
+            target_owner = tenant.room.boardinghouse.owner
+        elif tenant.owner:
+            target_owner = tenant.owner
+            
+        if target_owner:
+            # Sync: Show all notices from the owner
+            notices = Notice.objects.filter(boardinghouse__owner=target_owner, is_archived=False).order_by('-date')
 
     return render(request, 'dashboard/dashboard.html',{
         'feedback': Feedback.objects.filter(is_viewed=False, feedback_to=request.user).count(),
         'notice_count': len([n for n in notices if not n.is_viewed]),
+        'notice_notif': len([n for n in notices if not n.is_viewed]),
         'notices': notices[:5], # Show latest 5 on dashboard
         'tenant': tenant,
         'room': room,
@@ -370,11 +427,10 @@ def notice(request):
         try:
             tenant_instance = Tenant.objects.get(name__id=user.id)
             if tenant_instance.room and tenant_instance.room.boardinghouse:
-                notices = Notice.objects.filter(boardinghouse=tenant_instance.room.boardinghouse, is_archived=False)
-                for noti in notices:
-                    if not noti.is_viewed:
-                        noti.is_viewed = True
-                        noti.save()
+                owner = tenant_instance.room.boardinghouse.owner
+                # Show all notices from the owner of this boarding house
+                notices = Notice.objects.filter(boardinghouse__owner=owner, is_archived=False)
+                # Removed auto-marking as viewed here so other tenants still see the notification
             else:
                 notices = Notice.objects.none()
                 messages.info(request, "You are not yet assigned to a room. Once assigned, you will see notices from your Boarding House.")
@@ -392,10 +448,23 @@ def notice(request):
             if request.POST.get("button") == "add_notice":
 
                 if form.is_valid():
-                    notice = form.save(commit=False)
-                    notice.boardinghouse = BoardingHouse.objects.get(id=request.POST.get("boardinghouse"))
-                    notice.save()
-                    messages.success(request, 'Notice Submitted Successfully')
+                    target_bhouse_id = request.POST.get("boardinghouse")
+                    if target_bhouse_id == "all":
+                        # Post to all owner's boarding houses
+                        my_bhouses = BoardingHouse.objects.filter(owner=request.user, is_archive=False)
+                        for bh in my_bhouses:
+                            new_notice = Notice(
+                                title=form.cleaned_data['title'],
+                                notice=form.cleaned_data['notice'],
+                                boardinghouse=bh
+                            )
+                            new_notice.save()
+                        messages.success(request, f'Notice broadcasted to {my_bhouses.count()} boarding houses.')
+                    else:
+                        notice = form.save(commit=False)
+                        notice.boardinghouse = BoardingHouse.objects.get(id=target_bhouse_id)
+                        notice.save()
+                        messages.success(request, 'Notice Submitted Successfully')
                     return redirect('notice')
                 else:
                     messages.error(request, 'Notice Submission Failed')
@@ -473,14 +542,18 @@ def notice_detail(request, id):
     form = NoticeForms(instance=notice)
 
     if request.method == "POST":
-        form = NoticeForms(request.POST, instance=notice)
-        if form.is_valid():
-            notice = form.save(commit=False)
-            notice.save()
-            messages.success(request, 'Notice Updated Successfully')
-            return redirect('notice')
+        if request.user.is_superuser or request.user.is_staff:
+            form = NoticeForms(request.POST, instance=notice)
+            if form.is_valid():
+                notice = form.save(commit=False)
+                notice.save()
+                messages.success(request, 'Notice Updated Successfully')
+                return redirect('notice')
+            else:
+                messages.error(request, 'Notice Update Failed')
+                return redirect('notice')
         else:
-            messages.error(request, 'Notice Update Failed')
+            messages.error(request, 'You do not have permission to edit notices.')
             return redirect('notice')
 
     return render(request, 'dashboard/notice_detail.html',{
@@ -531,7 +604,7 @@ def feedbacks(request):
                     save.feedback_to = User.objects.get(id=room[0].boardinghouse.owner.id)
                 save.save()
                 messages.success(request, 'Feedback Submitted Successfully')
-                return redirect('feedbacks')
+                return redirect(f'/feedbacks/?to={recipient}')
         elif request.POST.get("button") == "edit":
             try:
                 feedback = Feedback.objects.get(id=request.POST.get("edit_id"))
@@ -544,7 +617,7 @@ def feedbacks(request):
                 feedback.date = datetime.now()
                 feedback.save()
                 messages.success(request, 'Feedback Updated Successfully')
-                return redirect('feedbacks')
+                return redirect(f'/feedbacks/?to={recipient}')
             except Exception as e:
                 messages.error(request, 'Feedback Update Failed')
                 print(e)
@@ -735,25 +808,29 @@ def landing_page(request):
         if inquiry_form.is_valid():
             inquiry = inquiry_form.save()
             
-            # Notify Owner via Email
-            try:
-                subject = f"New User Inquiry from {inquiry.full_name}"
-                message = f"You have received a new inquiry on the Boarding House Management System.\n\n" \
-                          f"Name: {inquiry.full_name}\n" \
-                          f"Email: {inquiry.email}\n" \
-                          f"Contact: {inquiry.contact_number}\n" \
-                          f"Message:\n{inquiry.message}\n\n" \
-                          f"You can reply to this inquiry by logging into your Owner Portal: {request.build_absolute_uri('/inquiries/')}"
-                
-                send_mail(
-                    subject,
-                    message,
-                    settings.EMAIL_HOST_USER,
-                    [settings.EMAIL_HOST_USER], # Sending to yourself
-                    fail_silently=True
-                )
-            except Exception as e:
-                print(f"Notification email failed: {e}")
+            # Notify Owner via Email in background to keep it fast
+            def send_inquiry_email(inquiry_data):
+                try:
+                    subject = f"New User Inquiry from {inquiry_data.full_name}"
+                    message = f"You have received a new inquiry on the Boarding House Management System.\n\n" \
+                              f"Name: {inquiry_data.full_name}\n" \
+                              f"Email: {inquiry_data.email}\n" \
+                              f"Contact: {inquiry_data.contact_number}\n" \
+                              f"Message:\n{inquiry_data.message}\n\n" \
+                              f"You can reply to this inquiry by logging into your Owner Portal: {request.build_absolute_uri('/inquiries/')}"
+                    
+                    send_mail(
+                        subject,
+                        message,
+                        settings.EMAIL_HOST_USER,
+                        [settings.EMAIL_HOST_USER],
+                        fail_silently=True
+                    )
+                except Exception as e:
+                    print(f"Notification email failed: {e}")
+
+            email_thread = threading.Thread(target=send_inquiry_email, args=(inquiry,))
+            email_thread.start()
 
             messages.success(request, 'Your inquiry has been sent to the Administrator!')
             return redirect('landing_page')
@@ -793,6 +870,7 @@ def feedback_reply(request, id):
         feedback.reply_date = datetime.now()
         feedback.save()
         messages.success(request, 'Reply sent successfully')
+        return redirect(f'/feedbacks/?user_id={feedback.user.id}')
     return redirect('feedbacks')
 
 
@@ -808,23 +886,23 @@ def complaints(request):
             received_complaints = Complaint.objects.filter(complaint_to__is_superuser=True, status=status_filter)
         elif request.user.is_staff:
             if hasattr(request.user, 'staff_profile'):
-                my_complaints = Complaint.objects.filter(user=request.user, status=status_filter)
-                received_complaints = Complaint.objects.filter(complaint_to=request.user, status=status_filter)
+                my_complaints = Complaint.objects.filter(user=request.user, status=status_filter).order_by('date')
+                received_complaints = Complaint.objects.filter(complaint_to=request.user, status=status_filter).order_by('date')
             else:
-                my_complaints = Complaint.objects.filter(user=request.user, status=status_filter)
-                received_complaints = Complaint.objects.filter(complaint_to=request.user, status=status_filter)
+                my_complaints = Complaint.objects.filter(user=request.user, status=status_filter).order_by('date')
+                received_complaints = Complaint.objects.filter(complaint_to=request.user, status=status_filter).order_by('date')
         else:
-            my_complaints = Complaint.objects.filter(user=request.user, status=status_filter).order_by('-date')
+            my_complaints = Complaint.objects.filter(user=request.user, status=status_filter).order_by('date')
         
         assigned_complaints = Complaint.objects.filter(assigned_staff=request.user, status=status_filter)
     else:
         if request.user.is_superuser:
-            received_complaints = Complaint.objects.filter(complaint_to__is_superuser=True, is_resolved=False)
+            received_complaints = Complaint.objects.filter(complaint_to__is_superuser=True, is_resolved=False).order_by('date')
         elif request.user.is_staff:
-            received_complaints = Complaint.objects.filter(models.Q(complaint_to=request.user) | models.Q(assigned_staff=request.user), is_resolved=False)
-            my_complaints = Complaint.objects.filter(user=request.user)
+            received_complaints = Complaint.objects.filter(models.Q(complaint_to=request.user) | models.Q(assigned_staff=request.user), is_resolved=False).order_by('date')
+            my_complaints = Complaint.objects.filter(user=request.user).order_by('date')
         else:
-            my_complaints = Complaint.objects.filter(user=request.user).order_by('-date')
+            my_complaints = Complaint.objects.filter(user=request.user).order_by('date')
 
     # Clear notifications by marking complaints as viewed
     received_complaints.filter(is_viewed=False).update(is_viewed=True)
@@ -964,17 +1042,21 @@ def inquiries(request):
             inquiry.reply_date = datetime.now()
             inquiry.save()
             
-            # Send Email Notification
+            # Send Email Notification in background
             if inquiry.email:
                 subject = f"Reply to your inquiry - {inquiry.full_name}"
                 message = f"Hello {inquiry.full_name},\n\nThank you for your inquiry. Here is our response:\n\n{inquiry.reply}\n\nBest regards,\nBoarding House Management"
                 email_from = settings.EMAIL_HOST_USER
                 recipient_list = [inquiry.email]
-                try:
-                    send_mail(subject, message, email_from, recipient_list, fail_silently=False)
-                    messages.success(request, 'Reply sent successfully and email notification delivered.')
-                except Exception as e:
-                    messages.warning(request, f'Reply saved, but email failed to send: {str(e)}')
+                
+                def send_reply_email():
+                    try:
+                        send_mail(subject, message, email_from, recipient_list, fail_silently=False)
+                    except Exception as e:
+                        print(f"Failed to send reply email: {e}")
+
+                threading.Thread(target=send_reply_email).start()
+                messages.success(request, 'Reply saved successfully. Email is being sent in the background.')
             else:
                 messages.success(request, 'Reply saved successfully (no email provided by user)')
                 
@@ -997,12 +1079,14 @@ def inquiries(request):
             body = request.POST.get("gmail_body")
             recipient = request.POST.get("to_email")
             
-            try:
-                send_mail(subject, body, settings.EMAIL_HOST_USER, [recipient], fail_silently=False)
-                # Optionally update status to 'Pending' or keep as is.
-                messages.success(request, f'Room Inquiry Form successfully sent to {inquiry.full_name} via Gmail.')
-            except Exception as e:
-                messages.warning(request, f'Failed to send Gmail form: {str(e)}')
+            def send_form_email():
+                try:
+                    send_mail(subject, body, settings.EMAIL_HOST_USER, [recipient], fail_silently=False)
+                except Exception as e:
+                    print(f"Failed to send form email: {e}")
+
+            threading.Thread(target=send_form_email).start()
+            messages.success(request, f'Room Inquiry Form is being sent to {inquiry.full_name} in the background.')
             return redirect('inquiries')
         elif request.POST.get("button") == "archive":
             inquiry = get_object_or_404(Inquiry, id=request.POST.get("inquiry_id"))

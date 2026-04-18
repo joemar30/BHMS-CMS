@@ -7,7 +7,7 @@ from tenants.models import Tenant
 class BoardingHouseForms(forms.ModelForm):
     class Meta:
         model = BoardingHouse
-        fields = ('name', 'description', 'address', 'num_beds', 'num_baths', 'latitude', 'longitude', 'image')
+        fields = ('name', 'description', 'address', 'num_beds', 'num_baths', 'latitude', 'longitude', 'image', 'has_wifi')
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'required': 'true'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': '2'}),
@@ -16,7 +16,8 @@ class BoardingHouseForms(forms.ModelForm):
             'num_baths': forms.NumberInput(attrs={'class': 'form-control', 'required': 'true'}),
             'latitude': forms.NumberInput(attrs={'class': 'form-control', 'required': 'true'}),
             'longitude': forms.NumberInput(attrs={'class': 'form-control', 'required': 'true'}),
-            'image': forms.FileInput(attrs={'class': 'form-control', 'required': 'true'}),
+            'image': forms.FileInput(attrs={'class': 'form-control'}),
+            'has_wifi': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
 

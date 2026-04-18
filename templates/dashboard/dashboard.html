@@ -240,6 +240,26 @@
             </div>
         </section>
     {% elif request.user.staff_profile %}
+        <section class="content-header pt-4">
+            <div class="container-fluid">
+                <div class="row align-items-center mb-4">
+                    <div class="col-auto">
+                        {% if request.user.profile.image %}
+                            <img src="{{ request.user.profile.image.url }}" class="rounded-circle shadow-sm" style="width: 80px; height: 80px; object-fit: cover; border: 3px solid #fff;">
+                        {% else %}
+                            <div class="rounded-circle bg-info text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 80px; height: 80px; font-size: 2rem;">
+                                {{ request.user.first_name|first|upper }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col">
+                        <h4 class="fw-bold mb-0">Welcome, Staff <span class="text-primary">{{ request.user.first_name }}</span></h4>
+                        <p class="text-muted small mb-0">Managed by {{ request.user.staff_profile.owner.get_full_name }}</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <section class="content">
             <div class="container-fluid">
                 <!-- Stat Cards -->
@@ -423,13 +443,25 @@
             <div class="max-w-7xl mx-auto">
                 <!-- Premium Header -->
                 <div class="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6 px-2">
-                    <div class="space-y-2">
-                        <div class="flex items-center gap-3">
-                            <span class="px-3 py-1 bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest rounded-md shadow-sm">Premium Account</span>
-                            <span class="text-slate-400 text-[11px] font-bold">{{ today|date:"l, F j, Y" }}</span>
+                    <div class="flex items-center gap-6">
+                        <div class="relative">
+                            {% if request.user.profile.image %}
+                                <img src="{{ request.user.profile.image.url }}" class="w-16 h-16 rounded-full object-cover ring-4 ring-white shadow-xl" alt="Profile">
+                            {% else %}
+                                <div class="w-16 h-16 rounded-full bg-[#0f172a] text-white flex items-center justify-center text-2xl font-bold ring-4 ring-white shadow-xl">
+                                    {{ request.user.first_name|first|upper }}
+                                </div>
+                            {% endif %}
+                            <span class="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full"></span>
                         </div>
-                        <h2 class="text-4xl font-black text-slate-900 tracking-tightest">Welcome, <span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600 capitalize">{{ request.user.first_name|default:request.user.username }}</span></h2>
-                        <p class="text-slate-500 font-medium text-sm">Elevating your property management experience.</p>
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-3">
+                                <span class="px-3 py-1 bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest rounded-md shadow-sm">Premium Account</span>
+                                <span class="text-slate-400 text-[11px] font-bold">{{ today|date:"l, F j, Y" }}</span>
+                            </div>
+                            <h2 class="text-4xl font-black text-slate-900 tracking-tightest">Welcome, <span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600 capitalize">{{ request.user.first_name|default:request.user.username }}</span></h2>
+                            <p class="text-slate-500 font-medium text-sm">Elevating your property management experience.</p>
+                        </div>
                     </div>
                 </div>
 
@@ -506,7 +538,7 @@
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
                     <!-- Analytical Chart Area -->
-                    <div class="lg:col-span-2 bg-white rounded-[2.5rem] p-10 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.05)] border border-slate-100/60">
+                    <div class="lg:col-span-3 bg-white rounded-[2.5rem] p-10 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.05)] border border-slate-100/60">
                         <div class="flex items-center justify-between mb-10">
                             <div class="flex items-center gap-5">
                                 <div class="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-slate-200">
@@ -523,43 +555,6 @@
                         </div>
                     </div>
 
-                    <!-- Side Interaction: Verification -->
-                    <div class="bg-slate-900 rounded-[2.5rem] p-1 shadow-xl border border-slate-800 overflow-hidden flex flex-col h-full">
-                        <div class="p-8 pb-6">
-                            <h3 class="text-lg font-black text-white tracking-tight">Access Control</h3>
-                            <p class="text-indigo-400 text-[10px] font-black uppercase tracking-widest mt-1">{{ pending_tenants.count }} Awaiting Verification</p>
-                        </div>
-                        <div class="flex-1 overflow-y-auto px-6 py-2 custom-scrollbar space-y-3">
-                            {% for user in pending_tenants %}
-                            <div class="group flex items-center justify-between p-5 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all duration-300">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-11 h-11 bg-white/10 rounded-xl flex items-center justify-center text-white font-black text-xs">
-                                        {{ user.username|slice:":1"|upper }}
-                                    </div>
-                                    <div>
-                                        <p class="text-sm font-black text-white capitalize leading-none">{{ user.username }}</p>
-                                        <p class="text-[9px] font-bold text-slate-500 uppercase mt-1 tracking-wider">Ref: #{{ user.id }}</p>
-                                    </div>
-                                </div>
-                                <form method="POST">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="user_id" value="{{ user.id }}">
-                                    <input type="hidden" name="button" value="activate">
-                                    <button type="submit" class="w-9 h-9 bg-indigo-600 text-white rounded-lg hover:bg-white hover:text-indigo-600 transition-all flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                                        <i class="fas fa-user-plus text-[10px]"></i>
-                                    </button>
-                                </form>
-                            </div>
-                            {% empty %}
-                            <div class="flex flex-col items-center justify-center py-24 text-center px-4">
-                                <div class="w-20 h-20 bg-white/5 rounded-3xl flex items-center justify-center text-white/10 mb-6 border border-white/5 rotate-12">
-                                    <i class="fas fa-user-check text-3xl"></i>
-                                </div>
-                                <p class="text-white text-xs font-black uppercase tracking-widest">Queue Clear</p>
-                                <p class="text-slate-500 text-[10px] mt-2 font-medium">All systems verified</p>
-                            </div>
-                            {% endfor %}
-                    </div>
                 </div>
             </div>
         </div>
@@ -571,8 +566,61 @@
             .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.1); }
         </style>
     {% else %}
-        <section class="content">
+        <section class="content-header pt-4">
             <div class="container-fluid">
+                <div class="row align-items-center mb-4 px-2">
+                    <div class="col-auto">
+                        {% if request.user.profile.image %}
+                            <img src="{{ request.user.profile.image.url }}" class="rounded-circle shadow" style="width: 70px; height: 70px; object-fit: cover; border: 3px solid #fff;">
+                        {% elif request.user.tenant_set.first.image %}
+                            <img src="{{ request.user.tenant_set.first.image.url }}" class="rounded-circle shadow" style="width: 70px; height: 70px; object-fit: cover; border: 3px solid #fff;">
+                        {% else %}
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow" style="width: 70px; height: 70px; font-size: 1.8rem;">
+                                {{ request.user.first_name|first|upper }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col">
+                        <h2 class="fw-black text-slate-900 mb-0">Hello, <span class="text-primary">{{ request.user.first_name|default:request.user.username }}</span>!</h2>
+                        <p class="text-muted font-medium small mb-0">Welcome back to your tenant portal.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+                <div class="row">
+                    <!-- Recent Notices Section -->
+                    <div class="col-md-12 mb-4">
+                        <div class="card border-0 shadow-sm rounded-4">
+                            <div class="card-header bg-white border-0 py-3">
+                                <h5 class="card-title fw-bold mb-0 text-primary">
+                                    <i class="fas fa-bullhorn me-2"></i>Recent Notices
+                                </h5>
+                                <div class="card-tools">
+                                    <a href="{% url 'notice' %}" class="btn btn-tool text-muted">View All</a>
+                                </div>
+                            </div>
+                            <div class="card-body p-0">
+                                <ul class="list-group list-group-flush">
+                                    {% for n in notices %}
+                                    <li class="list-group-item border-0 py-3 px-4 hover-bg-light transition-all">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <h6 class="fw-bold mb-0 {% if not n.is_viewed %}text-dark{% else %}text-muted{% endif %}">{{ n.title }}</h6>
+                                            <span class="text-muted extra-small">{{ n.date|date:"M d" }}</span>
+                                        </div>
+                                        <p class="text-muted small mb-0 text-truncate">{{ n.notice }}</p>
+                                    </li>
+                                    {% empty %}
+                                    <li class="list-group-item border-0 py-4 text-center text-muted small">
+                                        No recent notices to display.
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Small boxes (Stat box) -->
                 <div class="row">
                     <div class="col-lg-3 col-12">

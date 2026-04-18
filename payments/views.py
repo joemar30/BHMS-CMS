@@ -1,7 +1,11 @@
 from datetime import datetime, timedelta
+import stripe
+from django.conf import settings
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.csrf import csrf_exempt
 
 from django.contrib import messages
-from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.decorators import user_passes_test, login_required
 from django.shortcuts import render, redirect
 
 from boardinghouse.models import Room
@@ -79,8 +83,10 @@ def utility_bill(request):
     })
 
 
-@user_passes_test(lambda u: not u.is_superuser)
+@login_required(login_url='login')
 def payments(request):
+    if request.user.is_superuser:
+        return redirect('dashboard')
     tenant = None
     payments = Payments.objects.none()
     if request.user.is_staff:
@@ -135,8 +141,10 @@ def payments(request):
         'form_room': form_room,
     })
 
-@user_passes_test(lambda u: not u.is_superuser)
+@login_required(login_url='login')
 def online_payment(request):
+    if request.user.is_superuser:
+        return redirect('dashboard')
     if request.method == "POST":
         try:
             # Safer fetch
@@ -152,6 +160,7 @@ def online_payment(request):
             amount = request.POST.get('amount')
             mode = request.POST.get('payment_method', 'GCash')
             action_type = request.POST.get('action_type', 'pay_rent')
+            category = request.POST.get('bill_category', 'Rent')
             
             from decimal import Decimal
             numeric_amount = Decimal(amount)
@@ -172,7 +181,7 @@ def online_payment(request):
                 if tenant.wallet_balance < numeric_amount:
                     messages.error(request, 'Insufficient wallet balance. Please Cash In first.')
                     return redirect('payments')
-                note = f"Payment via {mode}"
+                note = category
                 tenant.wallet_balance -= numeric_amount
                 tenant.save()
             
@@ -184,6 +193,24 @@ def online_payment(request):
                 mode=mode,
                 note=note
             )
+            
+            # Get Boarding House Name
+            house_name = tenant.room.boardinghouse.name if tenant.room and tenant.room.boardinghouse else "Boarding House"
+            
+            # Generate a Mock Reference Number (GCash format: 2012 120 513868)
+            import random
+            ref_no = f"20{random.randint(10, 99)} {random.randint(100, 999)} {random.randint(100000, 999999)}"
+            
+            # Store data for Receipt Popup
+            request.session['receipt_data'] = {
+                'amount': f"{abs(float(amount)):,.2f}",
+                'ref_no': ref_no,
+                'date': payment_obj.date.strftime('%b %d, %Y %I:%M %p'),
+                'mode': mode,
+                'note': note,
+                'category': category if action_type == 'pay_rent' else note,
+                'house_name': house_name
+            }
             
             # Email Notification Logic
             try:
@@ -232,8 +259,10 @@ Boarding House Management System"""
 
 
 
-@user_passes_test(lambda u: not u.is_superuser)
+@login_required(login_url='login')
 def payments_info(request, id):
+    if request.user.is_superuser:
+        return redirect('dashboard')
     payment = Payments.objects.get(id=id)
 
     form = PaymentsForm(instance=payment)
@@ -273,6 +302,10 @@ def income(request):
     total_income = 0
 
     for p in payments:
+        # Exclude wallet loadings/withdrawals from Income Report
+        if p.note and any(kw in p.note for kw in ["Cash In", "Cash Out"]):
+            continue
+            
         all_transactions.append({
             'date': p.date,
             'type': 'Tenant Payment',
@@ -491,3 +524,82 @@ def transient_info(request, id):
         'payment': payment,
         'form': form,
     })
+
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
+@csrf_exempt
+def create_stripe_checkout_session(request):
+    if request.method == 'POST':
+        try:
+            amount = request.POST.get('amount')
+            action_type = request.POST.get('action_type', 'pay_rent')
+            
+            # Convert to cents for Stripe
+            amount_in_cents = int(float(amount) * 100)
+            
+            checkout_session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                line_items=[{
+                    'price_data': {
+                        'currency': 'php',
+                        'product_data': {
+                            'name': f'Boarding House Payment: {action_type.replace("_", " ").title()}',
+                        },
+                        'unit_amount': amount_in_cents,
+                    },
+                    'quantity': 1,
+                }],
+                mode='payment',
+                success_url=settings.STRIPE_SUCCESS_URL + f'?session_id={{CHECKOUT_SESSION_ID}}&amount={amount}&type={action_type}',
+                cancel_url=settings.STRIPE_CANCEL_URL,
+            )
+            return redirect(checkout_session.url, code=303)
+        except Exception as e:
+            messages.error(request, str(e))
+            return redirect('payments')
+    return redirect('payments')
+
+def stripe_success(request):
+    session_id = request.GET.get('session_id')
+    amount = request.GET.get('amount')
+    action_type = request.GET.get('type')
+    
+    if session_id:
+        try:
+            session = stripe.checkout.Session.retrieve(session_id)
+            if session.payment_status == 'paid':
+                tenant = Tenant.objects.get(name=request.user)
+                from decimal import Decimal
+                numeric_amount = Decimal(amount)
+                
+                if action_type == 'cash_in':
+                    note = "Stripe Cash In (Card)"
+                    tenant.wallet_balance += numeric_amount
+                else:
+                    note = f"Stripe Rent Payment (Card)"
+                    # If it's rent payment directly, we might subtract it from balance but here we use wallet logic
+                    # Usually Cash In first then pay, but here we do it directly
+                    # For simplicity, let's treat it as Cash In then immediate record
+                
+                tenant.save()
+                
+                # Record Payment
+                Payments.objects.create(
+                    room=tenant.room,
+                    tenant=tenant,
+                    amount=numeric_amount,
+                    mode="Stripe/Card",
+                    note=note
+                )
+                
+                messages.success(request, f'Payment of ₱{amount} successful via Stripe!')
+            else:
+                messages.error(request, 'Payment not verified.')
+        except Exception as e:
+            messages.error(request, f'Error processing Stripe success: {str(e)}')
+            
+    return redirect('payments')
+
+def stripe_cancel(request):
+    messages.warning(request, 'Payment cancelled.')
+    return redirect('payments')

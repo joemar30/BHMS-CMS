@@ -159,6 +159,28 @@
 
                             </div>
                         </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card bg-light border-0 rounded-3 mb-3">
+                                    <div class="card-body py-2 px-3">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <div class="d-flex align-items-center">
+                                                <div class="rounded-circle bg-white shadow-sm p-2 me-3">
+                                                    <i class="fas fa-wifi text-primary"></i>
+                                                </div>
+                                                <div>
+                                                    <label class="fw-bold mb-0 d-block">Wifi Availability</label>
+                                                    <small class="text-muted">Turn on if this house has internet</small>
+                                                </div>
+                                            </div>
+                                            <div class="form-check form-switch m-0">
+                                                {{ form.has_wifi }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <br>
                         <div class="mb-3 form-group">
                             <h5>Boarding House Location</h5>

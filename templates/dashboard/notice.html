@@ -121,12 +121,10 @@
                         <label for="id_boardinghouse">Boardinghouse:</label>
                         <select name="boardinghouse" class="form-control" required="" id="id_boardinghouse">
                             <option value="" selected="">---------</option>
+                            <option value="all" class="fw-bold text-primary">All Boarding Houses</option>
                             {% for bhouse in bhouses %}
-
-                            <option value="{{ bhouse.id }}">{{ bhouse.name }}</option>
-
+                                <option value="{{ bhouse.id }}">{{ bhouse.name }}</option>
                             {% endfor %}
-
                         </select>
                     </div>
                     <div class="modal-footer">

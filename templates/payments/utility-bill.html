@@ -93,12 +93,17 @@
                                 <td>{{ bill.rate|floatformat:2 }}</td>
                                 <td hidden>{{ bill.id }}</td>
 
-                                <td class="text-right">
-                                    <button type="button" class="btn btn-sm btn-warning edit" data-bs-toggle="modal"
-                                            data-bs-target="#editUtilityBills"><i class="fa fa-edit"></i></button>
-                                    <a class="btn btn-sm btn-danger delete" href="#" data-bs-toggle="modal"
-                                       data-bs-target="#deleteUtilityBill"><i
-                                            class="fa fa-trash-alt"></i></a>
+                                <td class="text-right pe-4">
+                                    <div class="action-group shadow-sm">
+                                        <button type="button" class="btn btn-sm btn-outline-warning edit" 
+                                                data-bs-toggle="modal" data-bs-target="#editUtilityBills" title="Edit Bill">
+                                            <i class="fa fa-edit"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger delete" 
+                                                data-bs-toggle="modal" data-bs-target="#deleteUtilityBill" title="Delete Bill">
+                                            <i class="fa fa-trash-alt"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
 

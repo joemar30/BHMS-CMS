@@ -32,12 +32,40 @@ def tenants_profile(request):
                 tenant.owner = request.user
                 tenant.address = request.POST.get('address')
                 tenant.contact_number = request.POST.get('number')
+                if 'image' in request.FILES:
+                    tenant.image = request.FILES['image']
                 tenant.save()
                 messages.success(request, 'Tenant added successfully!')
                 return redirect('tenants_profile')
             except Exception as e:
                 print(e)
                 messages.error(request, e)
+                return redirect('tenants_profile')
+        elif request.POST.get("button") == "edit":
+            try:
+                tenant = Tenant.objects.get(id=request.POST.get('edit_id'))
+                tenant.contact_number = request.POST.get('number')
+                tenant.address = request.POST.get('address')
+                if 'image' in request.FILES:
+                    tenant.image = request.FILES['image']
+                tenant.save()
+                
+                # Update associated User info
+                user = tenant.name
+                user.first_name = request.POST.get('first_name', user.first_name)
+                user.last_name = request.POST.get('last_name', user.last_name)
+                user.email = request.POST.get('email', user.email)
+                
+                # Password Change
+                new_password = request.POST.get('password')
+                if new_password:
+                    user.set_password(new_password)
+                user.save()
+                
+                messages.success(request, 'Tenant updated successfully!')
+                return redirect('tenants_profile')
+            except Exception as e:
+                messages.error(request, f"Update failed: {e}")
                 return redirect('tenants_profile')
         elif request.POST.get("button") == "archive":
             try:
@@ -47,7 +75,6 @@ def tenants_profile(request):
                 messages.success(request, 'Tenant archived successfully!')
                 return redirect('tenants_profile')
             except Exception as e:
-                print(e)
                 messages.error(request, e)
                 return redirect('tenants_profile')
 

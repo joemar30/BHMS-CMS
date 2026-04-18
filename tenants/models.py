@@ -16,6 +16,7 @@ class Tenant(models.Model):
     wallet_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     address = models.CharField(max_length=100, null=True, blank=True)
     contact_number = models.CharField(max_length=20, null=True, blank=True)
+    image = models.ImageField(upload_to='tenants', blank=True, null=True)
     is_archive = models.BooleanField(default=False)
     is_viewed = models.BooleanField(default=False)
 

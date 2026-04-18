@@ -82,6 +82,7 @@
                             <thead>
                             <tr>
                                 <th>ID</th>
+                                <th>Profile</th>
                                 <th>Username</th>
                                 <th>First Name</th>
                                 <th>Last Name</th>
@@ -94,6 +95,15 @@
                             {% for user in users %}
                                 <tr>
                                     <td class="fw-bold text-primary">{{ user.id }}</td>
+                                    <td>
+                                        {% if user.profile.image %}
+                                            <img src="{{ user.profile.image.url }}" class="rounded-circle shadow-sm" style="width: 35px; height: 35px; object-fit: cover; border: 2px solid #fff;">
+                                        {% else %}
+                                            <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center fw-bold" style="width: 35px; height: 35px; font-size: 0.8rem;">
+                                                {{ user.first_name|first|upper }}
+                                            </div>
+                                        {% endif %}
+                                    </td>
                                     <td>{{ user.username }}</td>
                                     <td>{{ user.first_name }}</td>
                                     <td>{{ user.last_name }}</td>

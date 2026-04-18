@@ -7,7 +7,27 @@
         </a>
     </div>
     <!-- Sidebar -->
-    <div class="sidebar">
+    <div class="sidebar px-2">
+        <!-- User Panel -->
+        <div class="user-panel mt-3 pb-3 mb-3 d-flex align-items-center px-2 border-bottom border-light border-opacity-10">
+            <div class="image">
+                {% if request.user.profile.image %}
+                    <img src="{{ request.user.profile.image.url }}" class="rounded-circle shadow-sm border border-2 border-primary" alt="User Image" style="width: 40px; height: 40px; object-fit: cover;">
+                {% elif request.user.tenant_set.first.image %}
+                    <img src="{{ request.user.tenant_set.first.image.url }}" class="rounded-circle shadow-sm border border-2 border-primary" alt="User Image" style="width: 40px; height: 40px; object-fit: cover;">
+                {% else %}
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 40px; height: 40px; font-size: 1rem;">
+                        {{ request.user.first_name|first|upper }}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="info ms-3 overflow-hidden">
+                <a href="{% url 'myaccount' %}" class="d-block text-white text-decoration-none" style="font-size: 0.9rem;">
+                    <span class="fw-bold d-block text-truncate" title="{{ request.user.get_full_name }}">{{ request.user.get_full_name }}</span>
+                    <span class="text-secondary small d-block text-truncate" style="font-size: 0.75rem;">{{ request.user.email }}</span>
+                </a>
+            </div>
+        </div>
         <!-- Sidebar Menu -->
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu"
@@ -19,6 +39,9 @@
                         <i class="nav-icon fa fa-tachometer-alt"></i>
                         <p>
                             Dashboard
+                            {% if pending_user_count %}
+                                <span class="badge badge-warning right">{{ pending_user_count }}</span>
+                            {% endif %}
                         </p>
                     </a>
                 </li>
@@ -41,8 +64,8 @@
                             <i class="nav-icon fa fa-bell"></i>
                             <p>
                                 Notice Board
-                                {% if not request.user.is_superuser and not request.user.is_staff and notice != 0 %}
-                                    <span class="badge badge-danger">{{ notice }}</span>
+                                {% if notice_notif != 0 %}
+                                    <span class="badge badge-info right">{{ notice_notif }}</span>
                                 {% endif %}
                             </p>
                         </a>

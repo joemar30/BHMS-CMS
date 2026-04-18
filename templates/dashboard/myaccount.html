@@ -5,7 +5,59 @@
 {% endblock %}
 
 {% block style %}
-
+<style>
+    .profile-pic-container {
+        position: relative;
+        width: 150px;
+        height: 150px;
+        margin: 0 auto 30px;
+    }
+    .profile-pic {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid #fff;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    .pic-overlay {
+        position: absolute;
+        bottom: 5px;
+        right: 5px;
+        background: #17a2b8;
+        color: #fff;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        border: 3px solid #fff;
+    }
+    .pic-overlay:hover {
+        background: #138496;
+        transform: scale(1.1);
+    }
+    #webcam-container {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 9999;
+        background: #000;
+        padding: 10px;
+        border-radius: 15px;
+        box-shadow: 0 0 50px rgba(0,0,0,0.5);
+    }
+    #webcam-video {
+        width: 100%;
+        max-width: 500px;
+        border-radius: 10px;
+    }
+</style>
 {% endblock %}
 
 {% block js %}
@@ -91,47 +143,133 @@
 
 
 
-            <div class="card card-success">
+            <div class="card border-0 shadow-sm" style="border-radius: 15px;">
                 <!-- form start -->
-                <form method="POST">
+                <form method="POST" enctype="multipart/form-data">
                     {% csrf_token %}
-                    <div class="card-body">
+                    <div class="card-body p-4 p-md-5">
+                        <!-- Profile Pic Section -->
+                        <div class="profile-pic-container">
+                            {% if request.user.profile.image %}
+                                <img id="profilePreview" src="{{ request.user.profile.image.url }}" class="profile-pic">
+                            {% else %}
+                                <img id="profilePreview" src="https://ui-avatars.com/api/?name={{ request.user.get_full_name|urlencode }}&background=17a2b8&color=fff&size=150" class="profile-pic">
+                            {% endif %}
+                            <label for="profile_image" class="pic-overlay" title="Upload Photo">
+                                <i class="fas fa-camera"></i>
+                            </label>
+                            <input type="file" name="profile_image" id="profile_image" style="display: none;" onchange="previewImage(this)">
+                            <input type="hidden" name="webcam_image" id="webcam_image">
+                        </div>
+                        
+                        <div class="text-center mb-5">
+                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-4" onclick="toggleWebcam()">
+                                <i class="fas fa-video me-2"></i>Take Photo with Camera
+                            </button>
+                        </div>
+
                         <div class="row">
                             <div class="col-md-8 offset-md-2">
-                                <div class="form-group">
+                                <div class="form-group mb-4">
                                     {{ form }}
+                                </div>
+                                <hr class="my-5 opacity-25">
+                                <div class="form-group mb-4">
+                                    <h6 class="fw-bold text-muted mb-4"><i class="fas fa-lock me-2 text-warning"></i>Security & Password</h6>
+                                    
+                                    <div class="mb-3">
+                                        {{ change_password_form.old_password.label_tag }}
+                                        {{ change_password_form.old_password }}
+                                        <small class="text-muted d-block mt-1">Leave blank if you don't want to change password.</small>
+                                    </div>
 
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            {{ change_password_form.new_password1.label_tag }}
+                                            {{ change_password_form.new_password1 }}
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            {{ change_password_form.new_password2.label_tag }}
+                                            {{ change_password_form.new_password2 }}
+                                        </div>
+                                    </div>
+                                    <div class="small text-muted">{{ change_password_form.new_password1.help_text|safe }}</div>
                                 </div>
                             </div>
-                            <div class="col-md-8 offset-md-2">
-                                <div class="form-group">
-
-                                    {{ change_password_form.old_password.label_tag }}
-                                    {{ change_password_form.old_password.errors }}
-
-                                    {{ change_password_form.old_password }} <br>
-                                    {{ change_password_form.new_password1.label_tag }}
-                                    {{ change_password_form.new_password1.errors }}
-                                    {{ change_password_form.new_password1 }}
-
-                                    {{ change_password_form.new_password1.help_text }} <br>
-
-                                    {{ change_password_form.new_password2.label_tag }}
-                                    {{ change_password_form.new_password2.errors }}
-                                    {{ change_password_form.new_password2 }}
-                                    {{ change_password_form.new_password2.help_text }}
-
-                                </div>
-                            </div>
-
                         </div>
-                        <!-- /.card-body -->
-                        <div class="card-footer align-center text-center">
-                            <button type="submit" class="btn btn-primary">Submit</button>
+
+                        <div class="card-footer bg-transparent border-0 text-center mt-4">
+                            <button type="submit" class="btn btn-info btn-lg rounded-pill px-5 fw-bold shadow-sm">
+                                SAVE CHANGES
+                            </button>
                         </div>
                     </div>
                 </form>
             </div>
+
+            <!-- Webcam Modal UI -->
+            <div id="webcam-container">
+                <h6 class="text-white text-center mb-2">Capture Profile Photo</h6>
+                <video id="webcam-video" autoplay playsinline></video>
+                <div class="d-flex justify-content-center gap-2 mt-3">
+                    <button type="button" class="btn btn-light rounded-pill px-4" onclick="stopWebcam()">Cancel</button>
+                    <button type="button" class="btn btn-info rounded-pill px-4" onclick="takeSnapshot()">Capture</button>
+                </div>
+                <canvas id="webcam-canvas" style="display:none;"></canvas>
+            </div>
+
+            <script>
+                function previewImage(input) {
+                    if (input.files && input.files[0]) {
+                        var reader = new FileReader();
+                        reader.onload = function(e) {
+                            document.getElementById('profilePreview').src = e.target.result;
+                        }
+                        reader.readAsDataURL(input.files[0]);
+                    }
+                }
+
+                let stream = null;
+                function toggleWebcam() {
+                    const container = document.getElementById('webcam-container');
+                    const video = document.getElementById('webcam-video');
+                    container.style.display = 'block';
+                    
+                    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+                        .then(function(s) {
+                            stream = s;
+                            video.srcObject = s;
+                        })
+                        .catch(function(err) {
+                            alert("Webcam error: " + err);
+                            container.style.display = 'none';
+                        });
+                }
+
+                function stopWebcam() {
+                    if (stream) {
+                        stream.getTracks().forEach(track => track.stop());
+                    }
+                    document.getElementById('webcam-container').style.display = 'none';
+                }
+
+                function takeSnapshot() {
+                    const video = document.getElementById('webcam-video');
+                    const canvas = document.getElementById('webcam-canvas');
+                    const preview = document.getElementById('profilePreview');
+                    const hiddenInput = document.getElementById('webcam_image');
+
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    canvas.getContext('2d').drawImage(video, 0, 0);
+
+                    const dataUrl = canvas.toDataURL('image/jpeg');
+                    preview.src = dataUrl;
+                    hiddenInput.value = dataUrl;
+
+                    stopWebcam();
+                }
+            </script>
         </div>
     </section>
 

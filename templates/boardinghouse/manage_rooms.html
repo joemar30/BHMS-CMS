@@ -106,17 +106,17 @@
                                 	<td>{{ tenant.room.boardinghouse.owner.get_full_name }}</td>
                                 {% endif %}
 
-                                <td class="text-right">
-                                    <button type="button" class="btn btn-sm btn-success edit" data-bs-toggle="modal"
-                                            data-bs-target="#edit">
-                                        <i
-                                                class="fa fa-eye"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-danger delete" data-bs-toggle="modal"
-                                            data-bs-target="#delete">
-                                        <i
-                                                class="fa fa-trash-alt"></i>
-                                    </button>
+                                <td class="text-right pe-4">
+                                    <div class="action-group shadow-sm">
+                                        <button type="button" class="btn btn-sm btn-outline-primary edit" 
+                                                data-bs-toggle="modal" data-bs-target="#edit" title="Edit Assignment">
+                                            <i class="fa fa-edit"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger delete" 
+                                                data-bs-toggle="modal" data-bs-target="#delete" title="Delete Assignment">
+                                            <i class="fa fa-trash-alt"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
 

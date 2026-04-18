@@ -14,7 +14,8 @@
 {% endblock %}
 
 {% block content %}
-    <div class="hero page-inner overlay" style="background-image: url('{% static "landing/images/hero_bg_1.jpg" %}');">
+    {% static "landing/images/hero_bg_1.jpg" as hero_bg %}
+    <div class="hero page-inner overlay" style="background-image: url('{{ hero_bg }}');">
 
         <div class="container">
             <div class="row justify-content-center align-items-center">
@@ -52,11 +53,11 @@
 
                             <div class="property-content">
                                 <div class="price mb-2 d-flex justify-content-between align-items-center">
-                                    <span class="text-primary font-weight-bold">₱{{ room.price }}</span>
+                                    <span class="text-primary font-weight-bold">&#8369;{{ room.price }}</span>
                                     {% if room.is_full %}
-                                        <span class="badge bg-danger rounded-pill px-3 py-2" style="font-size: 0.8rem;">Fully Occupied</span>
+                                        <span class="badge bg-danger rounded-pill px-3 py-2" style="font-size: 0.8rem">Fully Occupied</span>
                                     {% else %}
-                                        <span class="badge bg-success rounded-pill px-3 py-2" style="font-size: 0.8rem;">{{ room.space_left }} space{{ room.space_left|pluralize }} left</span>
+                                        <span class="badge bg-success rounded-pill px-3 py-2" style="font-size: 0.8rem">{{ room.space_left }} space{{ room.space_left|pluralize }} left</span>
                                     {% endif %}
                                 </div>
                                 <div>
