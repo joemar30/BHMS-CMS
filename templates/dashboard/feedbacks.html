@@ -220,11 +220,11 @@
                     <h5 class="fw-bold mb-0">Conversations</h5>
                 </div>
                 <div class="chat-list" id="sidebarConversations">
-                    {% if request.user.is_superuser or request.user.is_staff %}
-                        <!-- Owner View Sidebar -->
+                    {% if request.user.is_superuser or is_owner %}
+                        <!-- Owner/Admin View Sidebar -->
                         {% for conv_user in conversations %}
-                        <div class="chat-item {% if forloop.first %}active{% endif %} conversation-item" 
-                             data-user-id="{{ conv_user.id }}" 
+                        <div class="chat-item {% if forloop.first %}active{% endif %} conversation-item"
+                             data-user-id="{{ conv_user.id }}"
                              data-name="{{ conv_user.get_full_name }}"
                              data-avatar="{{ conv_user.first_name|first|upper }}{{ conv_user.last_name|first|upper }}">
                             <div class="chat-avatar bg-soft-info text-info">
@@ -238,6 +238,40 @@
                         {% empty %}
                         <div class="p-4 text-center text-muted small">No conversations yet</div>
                         {% endfor %}
+
+                    {% elif is_staff_member %}
+                        <!-- Staff Member Sidebar — can chat Admin and their Owner -->
+                        <div class="chat-item active" data-recipient="admin">
+                            <div class="position-relative">
+                                <div class="chat-avatar bg-soft-primary text-primary">SY</div>
+                                <div class="status-dot"></div>
+                            </div>
+                            <div class="flex-1 overflow-hidden">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold text-dark text-truncate chat-name">System Admin</span>
+                                    <small class="text-muted" style="font-size: 0.7rem;">Active</small>
+                                </div>
+                                <p class="text-muted small text-truncate mb-0">Help Desk &amp; Feedback</p>
+                            </div>
+                        </div>
+                        {% if staff_owner %}
+                        <div class="chat-item" data-recipient="owner">
+                            <div class="position-relative">
+                                <div class="chat-avatar" style="background:#e0fdf4; color:#047857;">
+                                    {{ staff_owner.first_name|first|upper }}{{ staff_owner.last_name|first|upper }}
+                                </div>
+                                <div class="status-dot"></div>
+                            </div>
+                            <div class="flex-1 overflow-hidden">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold text-dark text-truncate chat-name">{{ staff_owner.get_full_name }}</span>
+                                    <small class="text-success" style="font-size: 0.7rem;">Owner</small>
+                                </div>
+                                <p class="text-muted small text-truncate mb-0">Owner Portal</p>
+                            </div>
+                        </div>
+                        {% endif %}
+
                     {% else %}
                         <!-- Tenant View Sidebar -->
                         <div class="chat-item active" data-recipient="admin">
@@ -250,7 +284,7 @@
                                     <span class="fw-bold text-dark text-truncate chat-name">System Admin</span>
                                     <small class="text-muted" style="font-size: 0.7rem;">Active</small>
                                 </div>
-                                <p class="text-muted small text-truncate mb-0">Help Desk & Feedback</p>
+                                <p class="text-muted small text-truncate mb-0">Help Desk &amp; Feedback</p>
                             </div>
                         </div>
                         {% if room %}
@@ -333,17 +367,21 @@
                     {% endif %}
                 </div>
 
-                <!-- Input area for tenants -->
-                {% if not request.user.is_superuser and not request.user.is_staff %}
+                <!-- Input area for tenants AND staff members -->
+                {% if not request.user.is_superuser and not is_owner %}
                 <form method="post" class="chat-input-area">
                     {% csrf_token %}
                     <div class="chat-input-container shadow-sm border">
                         <select name="feedback_to" id="to_select" class="form-select border-0 bg-transparent py-0 px-2 fw-bold text-primary" style="width: auto; font-size: 0.85rem; box-shadow: none;">
                             <option value="admin">@Admin</option>
-                            {% if room %}<option value="owner">@Owner</option>{% endif %}
+                            {% if is_staff_member %}
+                                <option value="owner">@{{ staff_owner.first_name }} (Owner)</option>
+                            {% elif room %}
+                                <option value="owner">@Owner</option>
+                            {% endif %}
                         </select>
                         <div class="vr mx-1 my-2 opacity-10"></div>
-                        <input type="text" name="feedback" placeholder="Type your feedback here..." required>
+                        <input type="text" name="feedback" placeholder="Type your message here..." required>
                         <button type="submit" name="button" value="add" class="send-btn shadow">
                             <i class="fas fa-paper-plane"></i>
                         </button>
@@ -351,8 +389,8 @@
                 </form>
                 {% endif %}
 
-                <!-- Input area for Admin/Owner -->
-                {% if request.user.is_superuser or request.user.is_staff %}
+                <!-- Input area for Owner (reply-only) -->
+                {% if is_owner or request.user.is_superuser %}
                 <form id="ownerInlineReplyForm" method="post" class="chat-input-area">
                     {% csrf_token %}
                     <div class="chat-input-container shadow-sm border">
@@ -485,7 +523,8 @@
         $('.chat-item').removeClass('active');
         $(this).addClass('active');
         
-        const isOwner = "{{ request.user.is_superuser|lower }}" === "true" || "{{ request.user.is_staff|lower }}" === "true";
+    const isOwner = ("{{ request.user.is_superuser|lower }}" === "true") ||
+                    ("{{ request.user.is_staff|lower }}" === "true" && "{{ is_staff_member|lower }}" !== "true");
         
         if (!isOwner) {
             // Tenant Logic

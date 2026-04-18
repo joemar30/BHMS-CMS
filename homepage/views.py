@@ -572,6 +572,8 @@ def notice_detail(request, id):
 
 @user_passes_test(lambda u: u.is_authenticated)
 def feedbacks(request):
+    is_staff_member = hasattr(request.user, 'staff_profile')
+    staff_owner = None
 
     if request.user.is_superuser:
         my_feedbacks = None
@@ -579,19 +581,32 @@ def feedbacks(request):
         for feeds in received_feedbacks:
             feeds.is_viewed = True
             feeds.save()
-    elif request.user.is_staff:
+
+    elif is_staff_member:
+        # Staff member — show messages they sent to their owner, and msgs sent to them
+        staff_owner = request.user.staff_profile.owner
         my_feedbacks = Feedback.objects.filter(user=request.user, is_archived=False).order_by('date')
         received_feedbacks = Feedback.objects.filter(feedback_to=request.user, is_archived=False).order_by('date')
         for feeds in received_feedbacks:
             feeds.is_viewed = True
             feeds.save()
+
+    elif request.user.is_staff:
+        # Owner — see feedbacks sent to them
+        my_feedbacks = None
+        received_feedbacks = Feedback.objects.filter(feedback_to=request.user, is_archived=False).order_by('date')
+        for feeds in received_feedbacks:
+            feeds.is_viewed = True
+            feeds.save()
+
     else:
+        # Tenant
         my_feedbacks = Feedback.objects.filter(user=request.user, is_archived=False).order_by('date')
         received_feedbacks = None
 
-    # For admin/owner, get list of users who sent them feedback
+    # For owner/superuser: build conversation sidebar from senders
     conversations = []
-    if request.user.is_superuser or request.user.is_staff:
+    if request.user.is_superuser or (request.user.is_staff and not is_staff_member):
         senders = Feedback.objects.filter(feedback_to=request.user, is_archived=False).values_list('user', flat=True).distinct()
         conversations = User.objects.filter(id__in=senders)
 
@@ -608,10 +623,15 @@ def feedbacks(request):
                 if recipient == "admin":
                     save.feedback_to = User.objects.filter(is_superuser=True)[0]
                 elif recipient == "owner":
-                    save.feedback_to = User.objects.get(id=room[0].boardinghouse.owner.id)
+                    if is_staff_member:
+                        # Staff sending to their employer
+                        save.feedback_to = request.user.staff_profile.owner
+                    elif room.exists():
+                        save.feedback_to = User.objects.get(id=room[0].boardinghouse.owner.id)
                 save.save()
-                messages.success(request, 'Feedback Submitted Successfully')
+                messages.success(request, 'Message Sent Successfully')
                 return redirect(f'/feedbacks/?to={recipient}')
+
         elif request.POST.get("button") == "edit":
             try:
                 feedback = Feedback.objects.get(id=request.POST.get("edit_id"))
@@ -620,15 +640,18 @@ def feedbacks(request):
                 if recipient == "admin":
                     feedback.feedback_to = User.objects.filter(is_superuser=True)[0]
                 elif recipient == "owner":
-                    feedback.feedback_to = User.objects.get(id=room[0].boardinghouse.owner.id)
+                    if is_staff_member:
+                        feedback.feedback_to = request.user.staff_profile.owner
+                    elif room.exists():
+                        feedback.feedback_to = User.objects.get(id=room[0].boardinghouse.owner.id)
                 feedback.date = datetime.now()
                 feedback.save()
-                messages.success(request, 'Feedback Updated Successfully')
+                messages.success(request, 'Message Updated Successfully')
                 return redirect(f'/feedbacks/?to={recipient}')
             except Exception as e:
-                messages.error(request, 'Feedback Update Failed')
-                print(e)
+                messages.error(request, 'Update Failed')
                 return redirect('feedbacks')
+
         elif request.POST.get("button") == "delete":
             try:
                 feedback = Feedback.objects.get(id=request.POST.get("delete_id"))
@@ -638,11 +661,12 @@ def feedbacks(request):
                 messages.success(request, 'Feedback Archived Successfully')
                 return redirect('feedbacks')
             except Exception as e:
-                messages.error(request, 'Feedback Archived Failed')
-                print(e)
+                messages.error(request, 'Archive Failed')
                 return redirect('feedbacks')
 
-    return render(request, 'dashboard/feedbacks.html',{
+    is_owner = request.user.is_staff and not is_staff_member and not request.user.is_superuser
+
+    return render(request, 'dashboard/feedbacks.html', {
         'feedback_notif': Feedback.objects.filter(is_viewed=False, feedback_to=request.user).count(),
         'complaint_notif': Complaint.objects.filter(complaint_to=request.user, is_resolved=False).count(),
         'notice': Notice.objects.filter(is_viewed=False).count(),
@@ -651,6 +675,9 @@ def feedbacks(request):
         'room': room,
         'received_feedbacks': received_feedbacks,
         'conversations': conversations,
+        'is_staff_member': is_staff_member,
+        'is_owner': is_owner,
+        'staff_owner': staff_owner,
     })
 
 @user_passes_test(lambda u: u.is_superuser)
